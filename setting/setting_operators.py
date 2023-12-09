@@ -331,7 +331,7 @@ class LayoutProperty:
             Props.DST_VG: ('extracted_destination_vg_candidates', Icon.VG, 2),
             Props.DST: ('extracted_destination_candidates', scope_type_icon, 1),
             Props.MERGE_DIST: ('merge_distance', Icon.OPT, 1),
-            Props.SPEC: ('specs', Icon.SPEC, 3),
+            Props.SPEC: ('extracted_spec_candidates', Icon.SPEC, 3),
         }
 
         for position in range(num_properties):
@@ -354,9 +354,6 @@ class LayoutProperty:
                 for property_name, (candidates_name, icon_name) in extracted_properties_by_now_position.items():
                     if property_name == Props.MERGE_DIST and property_name in dir(command):
                         column.prop(command, property_name, text='Merge distance', icon=icon_name)
-                        break
-                    if property_name == Props.SPEC and property_name in dir(command):
-                        column.prop_search(command, property_name, scene.samk, candidates_name, text='', icon=icon_name)
                         break
                     if property_name in dir(command):
                         column.prop_search(command, property_name, command, candidates_name, text='', icon=icon_name)

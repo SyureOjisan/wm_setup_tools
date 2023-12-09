@@ -61,7 +61,7 @@ def check_data(obj):
                 bpy.context.scene.samk.scope_type_to_edit = ScopeTypeClass.__name__.split(Syntax.UNDER)[1]
                 for command in current_scope_type.this_type_commands():
                     command.update(None)
-                    for prop_name in (Props.SRC, Props.DST, Props.DST_MDF, Props.DST_OBJ, Props.DST_VG):
+                    for prop_name in (Props.SRC, Props.DST, Props.DST_MDF, Props.DST_OBJ, Props.DST_VG, Props.SPEC):
                         candidates_name = 'extracted_' + prop_name + '_candidates'
                         if prop_name not in dir(command):
                             continue

@@ -35,6 +35,13 @@ class SAMKProfileError(SAMKError):  # プロファイルエラー
 
 
 @dataclass(frozen=True)
+class SYS_SPECS:
+    DEFAULT = 'Default'
+    FULL = 'Full'
+    DISABLE = 'Disable'
+
+
+@dataclass(frozen=True)
 class Props:
     SRC = 'source'
     DST = 'destination'
