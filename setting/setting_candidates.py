@@ -20,6 +20,8 @@ import bpy
 
 from ..setup import setup_collection
 
+from .. import syntax
+
 from . import setting_command
 
 # simplified Mediator Pattern
@@ -204,3 +206,59 @@ class VertexGroupMediator(Mediator):
                 black_list.append(command_destination_obj.source)
 
         return set(black_list)
+
+
+class AbstractSpecMediator(ABC):
+    def __init__(self, command) -> None:
+        super().__init__()
+        self.current_scope_type: setting_command.ScopeType = setting_command.current_scope()
+        self.command = command
+
+    def notify(self):
+        extracted_names = self._extracted_names()
+
+        for extracted_name in extracted_names:
+            new_extraction = self.extracted_list.add()
+            new_extraction.name = extracted_name
+
+    @abstractmethod
+    def _names(self):
+        pass
+
+    @abstractmethod
+    def _black_list(self):
+        pass
+
+    def _extracted_names(self):
+        extracted_names = self._names().difference(self._black_list())
+        sorted_extracted_names = sorted(extracted_names)
+
+        return sorted_extracted_names
+
+
+class SpecMediator(AbstractSpecMediator):
+    def __init__(self, command) -> None:
+        super().__init__(command)
+        self.extracted_list = self.command.extracted_spec_candidates
+        self.extracted_list.clear()
+
+    def _names(self):
+        return set(specs.name for specs in bpy.context.scene.samk.specs)
+
+    def _black_list(self):
+        return set()
+
+
+class UndivisionSpecMediator(AbstractSpecMediator):
+    def __init__(self, command) -> None:
+        super().__init__(command)
+        self.extracted_list = self.command.extracted_spec_candidates
+        self.extracted_list.clear()
+
+    def _names(self):
+        names = set()
+        names.add(syntax.SYS_SPECS.DEFAULT)
+        return names
+
+    def _black_list(self):
+        return set()

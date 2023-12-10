@@ -141,6 +141,10 @@ class SearchProperty(PropertyGroup):
     )
 
 
+class ExtractedSpecCandidate(SearchProperty):
+    pass
+
+
 class ExtractedSourceCandidate(SearchProperty):
     pass
 
@@ -182,29 +186,41 @@ class SAMKPropertyGroup(PropertyGroup):
     def update_object(self, context):
         pass
 
+    def update_spec(self, context):
+        setting_candidates.SpecMediator(self).notify()
+
     def update(self, context):
         self.update_source(context)
         self.update_destination(context)
         self.update_modifier(context)
         self.update_vertexgroup(context)
         self.update_object(context)
+        self.update_spec(context)
 
     name: StringProperty(
         name='Strategy name',
         description='Strategy name.'
     )
+
     index: IntProperty(
     )
+
     spec: StringProperty(
         name='Spec name',
         description='Spec name for setup.',
         update=update_all
     )
+
+    extracted_spec_candidates: CollectionProperty(
+        type=ExtractedSpecCandidate
+    )
+
     source: StringProperty(
         name='Source item name',
         description='Source item name.',
         update=update_all
     )
+
     extracted_source_candidates: CollectionProperty(
         type=ExtractedSourceCandidate
     )
@@ -248,7 +264,8 @@ class SK_ApplySingle(SAMKPropertyGroupWithDestination):
 
 
 class MDF_Undivision(SAMKPropertyGroup):
-    pass
+    def update_spec(self, context):
+        setting_candidates.UndivisionSpecMediator(self).notify()
 
 
 class MDF_Delete(SAMKPropertyGroup):
@@ -453,6 +470,7 @@ classes = [
     ExtractedDestinationMDFCandidate,
     ExtractedDestinationVGCandidate,
     ExtractedDestinationOBJCandidate,
+    ExtractedSpecCandidate,
     SK_ApplySingle,
     MDF_Undivision,
     MDF_Delete,
