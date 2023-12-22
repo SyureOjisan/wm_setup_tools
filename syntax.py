@@ -37,7 +37,7 @@ class SAMKProfileError(SAMKError):  # プロファイルエラー
 @dataclass(frozen=True)
 class SYS_SPECS:
     DEFAULT = 'Default'
-    FULL = 'Full'
+    DEFAULTONLY = 'DefaultOnly'
     DISABLE = 'Disable'
 
 
@@ -52,7 +52,19 @@ class Props:
     SPEC = 'spec'
 
 
-ALL_PROPS = tuple(getattr(Props, name) for name in dir(Props) if not name.startswith('_'))
+def _member_list(CLS):
+    return tuple(getattr(CLS, name) for name in dir(CLS) if not name.startswith('_'))
+
+
+ALL_SYS_SPECS = _member_list(SYS_SPECS)
+
+ALL_PROPS = _member_list(Props)
+
+SELECTABLE_SYS_SPECS = tuple(
+    (SYS_SPECS.DEFAULTONLY, ),
+    )
+
+UNSELECTABLE_SYS_SPECS = tuple(set(ALL_SYS_SPECS).difference(SELECTABLE_SYS_SPECS))
 
 
 @dataclass(frozen=True)
