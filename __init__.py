@@ -66,18 +66,28 @@ from .setting.setting_operators import update_active_object, update_property_can
 
 from .setting.setting_command import SAMKCommandForAdd, SAMKStrategies
 
-from .setting.setting_spec import SAMKSpec
+from .setting.setting_spec import SAMKSpec, specs_candidates, update_specs
 
 from .syntax import Syntax
 
 
 class SAMKAllProperty(PropertyGroup):
+    new_spec_name: StringProperty(
+        name='New spec name',
+        description='type unique new spec name',
+        default=''
+    )
     specs: CollectionProperty(
         type=SAMKSpec
     )
     specs_index: IntProperty(
         name='Index for spec list',
         default=0,
+    )
+    specs_enum: EnumProperty(
+        name='select spec for setup',
+        items=specs_candidates,
+        update=update_specs
     )
     scoped_collection: EnumProperty(
         name='Scoped collection',

@@ -243,7 +243,7 @@ class SpecMediator(AbstractSpecMediator):
         self.extracted_list.clear()
 
     def _names(self):
-        return set(specs.name for specs in bpy.context.scene.samk.specs)
+        return set(spec.name for spec in bpy.context.scene.samk.specs if spec.name not in syntax.SELECTABLE_SYS_SPECS)
 
     def _black_list(self):
         return set()

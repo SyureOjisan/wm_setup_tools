@@ -21,8 +21,6 @@ from bpy.props import BoolProperty, StringProperty
 
 from bpy.types import Panel, PropertyGroup
 
-from .setting.setting_spec import SAMK_UL_SpecList
-
 from .setting.setting_operators import SAMK_OT_CheckData, SAMK_OT_RemoveSpec, SAMK_OT_LoadSpecs, SAMK_OT_AddSpec, SAMK_OT_SetupOutliner
 
 from .debug import SAMK_OT_DebugQueue, SAMK_OT_DebugStrategy
@@ -54,14 +52,10 @@ class SAMK_PT_Settings(Panel):
 
         column = layout.column()
         column.label(text='Spec Selection')
-        row = column.row()
-        row.template_list(SAMK_UL_SpecList.__name__, 'The_List', scene.samk, 'specs', scene.samk, 'specs_index')
-
-        tb = row.column()
-        tb1 = tb.column(align=True)
-        tb1.operator(SAMK_OT_AddSpec.bl_idname, text='', icon='ADD')
-        tb1.operator(SAMK_OT_RemoveSpec.bl_idname, text='', icon='REMOVE')
-        # tb1.operator(SAMK_OT_LoadSpecs.bl_idname, text='', icon='DOWNARROW_HLT')
+        row = column.row(align=True)
+        row.prop(scene.samk, 'specs_enum', text='')
+        row.operator(SAMK_OT_RemoveSpec.bl_idname, text='', icon='TRASH')
+        row.operator(SAMK_OT_AddSpec.bl_idname, text='', icon='ADD')
 
         column.operator(SAMK_OT_SetupOutliner.bl_idname)
         column.operator(SAMK_OT_CheckData.bl_idname)

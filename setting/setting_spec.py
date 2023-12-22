@@ -17,48 +17,19 @@
 
 import bpy
 
-from ..syntax import Icon, Syntax
+from .. import syntax
 
 from bpy.props import BoolProperty, StringProperty
 
-from bpy.types import PropertyGroup, UIList
-
-
-def change_to_unique_name(self, context):
-    def spec_names():
-        return list(spec.name for spec in context.scene.samk.specs)
-
-    if len(set(spec_names())) == len(spec_names()):
-        return
-
-    for spec in reversed(context.scene.samk.specs):
-        if spec_names().count(spec.name) > 1:
-            index_rename = 0
-            new_spec_name = spec.name
-            while spec_names().count(new_spec_name) > 0:
-                name_splitted = new_spec_name.split(Syntax.DOT)
-                try:
-                    index_rename = int(name_splitted[-1])
-                except ValueError:
-                    index_rename += 1
-                    new_spec_name = Syntax.DOT.join(name_splitted)
-                else:
-                    index_rename += 1
-                    if len(name_splitted) > 1:
-                        new_spec_name = Syntax.DOT.join(name_splitted[:-1])
-                    else:
-                        new_spec_name = name_splitted[0]
-                finally:
-                    new_spec_name += '{}{:0=3}'.format(Syntax.DOT, index_rename)
-            spec.name = new_spec_name
+from bpy.types import PropertyGroup
 
 
 class SAMKSpec(PropertyGroup):
     name: StringProperty(
         name='Spec name',
         description='Spec name for setup.',
-        default='Default',
-        update=change_to_unique_name
+        default='Default'
+        # update=change_to_unique_name
     )
 
     is_enabled: BoolProperty(
@@ -68,28 +39,40 @@ class SAMKSpec(PropertyGroup):
     )
 
 
-class SAMK_UL_SpecList(UIList):
-    def draw_item(self, context: bpy.context, layout, data, item, icon, active_data,
-                  active_propname, index):
+def specs_candidates(self, context):
+    spec_list = list()
+    selectable_all_specs = list()
+    
+    for spec in self.specs:
+        if spec.name in syntax.UNSELECTABLE_SYS_SPECS:
+            continue
+        selectable_all_specs.append(spec.name)     
 
-        scene = context.scene
+    for selectable_spec in selectable_all_specs:
+        spec_list.append(tuple(selectable_spec for _ in range(3)))
 
-        custom_icon = Icon.SPEC
+    return spec_list
 
-        row = layout.row()
 
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            row.label(text='', icon=custom_icon)
-            row.prop(item, 'name', text='')
-            row.prop(item, 'is_enabled', text='')
+def update_specs(self, context: bpy.context):
+    scene = context.scene
 
-        elif self.layout_type in {'GRID'}:
-            row.alignment = 'CENTER'
-            row.label(text='', icon=custom_icon)
-            row.prop(item, 'is_enabled', text='')
+    spec_names = tuple(spec.name for spec in self.specs)
+    for sys_spec in syntax.ALL_SYS_SPECS:
+        if sys_spec not in spec_names:
+            new_spec = self.specs.add()
+            new_spec.name = sys_spec
+
+    for spec in self.specs:
+        if spec.name == self.specs_enum:
+            spec.is_enabled = True
+            continue
+        if spec.name == syntax.SYS_SPECS.DEFAULT:
+            spec.is_enabled = True
+            continue
+        spec.is_enabled = False
 
 
 classes = [
     SAMKSpec,
-    SAMK_UL_SpecList,
 ]

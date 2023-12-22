@@ -23,13 +23,11 @@ from bpy.types import Operator
 
 from ..setting.setting_check import check_data
 
-from ..syntax import Icon, Props, SAMKStructureError, SAMKSyntaxError, Syntax
+from ..syntax import Icon, Props, SAMKStructureError, SAMKSyntaxError, Syntax, SYS_SPECS, ALL_SYS_SPECS, SELECTABLE_SYS_SPECS
 
 from ..function import set_active_only
 
 from ..setup import setup_collection as sucoll
-
-from ..setting.setting_spec import change_to_unique_name
 
 from ..setting.setting_command import SAMK_OT_AddCommand, SAMK_OT_RemoveCommand, ScopeType, current_scope
 
@@ -40,9 +38,52 @@ class SAMK_OT_AddSpec(Operator):
     bl_label = 'Add new spec'
 
     def execute(self, context):
-        context.scene.samk.specs.add()
-        change_to_unique_name(self, context)
+        scene = context.scene
+        if self.is_already_exist_spec(context):
+            return {'FINISHED'}
+        if self.is_empty_spec_name(context):
+            return {'FINISHED'}
+        if self.is_system_reserved_name(context):
+            return {'FINISHED'}
+        new_spec = context.scene.samk.specs.add()
+        new_spec.name = scene.samk.new_spec_name
+        context.scene.samk.specs_enum = new_spec.name
         return {'FINISHED'}
+
+    def invoke(self, context, event):
+        scene = context.scene
+        scene.samk.new_spec_name = ''
+
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self, width=800)
+
+    def draw(self, context: bpy.context):
+        scene = context.scene
+        layout = self.layout
+        column = layout.column()
+
+        column.prop(scene.samk, 'new_spec_name')
+
+        column.alert = True
+        if self.is_already_exist_spec(context):
+            column.label(text='Typed spec name is already exist.')
+        if self.is_empty_spec_name(context):
+            column.label(text='Typed spec name is empty.')
+        if self.is_system_reserved_name(context):
+            column.label(text='Typed spec name is system reserved.')
+
+    
+    def is_already_exist_spec(self, context):
+        scene = context.scene
+        return scene.samk.new_spec_name in [spec.name for spec in scene.samk.specs]
+
+    def is_empty_spec_name(self, context):
+        scene = context.scene
+        return scene.samk.new_spec_name == ''
+
+    def is_system_reserved_name(self, context):
+        scene = context.scene
+        return scene.samk.new_spec_name in ALL_SYS_SPECS
 
 
 class SAMK_OT_RemoveSpec(Operator):
@@ -51,14 +92,20 @@ class SAMK_OT_RemoveSpec(Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.scene.samk.specs
+        return context.scene.samk.specs and (context.scene.samk.specs_enum != SYS_SPECS.DEFAULTONLY)
 
-    def execute(self, context):
-        samk_specs = context.scene.samk.specs
-        index = context.scene.samk.specs_index
-
-        samk_specs.remove(index)
-        context.scene.samk.specs_index = min(max(0, index - 1), len(samk_specs) - 1)
+    def execute(self, context: bpy.context):
+        samk_specs = context.scene.samk.specs        
+        for index, samk_spec in enumerate(samk_specs):
+            if context.scene.samk.specs_enum == samk_spec.name:
+                index_new = index - 1
+                samk_specs.remove(index)
+                
+                new_selected_spec_name = samk_specs[index_new].name
+                if new_selected_spec_name in ALL_SYS_SPECS:
+                    new_selected_spec_name = SELECTABLE_SYS_SPECS[0]
+                context.scene.samk.specs_enum = new_selected_spec_name
+                break
 
         return {'FINISHED'}
 
