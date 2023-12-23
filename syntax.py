@@ -77,6 +77,7 @@ class Icon:
     SK = 'SHAPEKEY_DATA'
     MT = 'MATERIAL_DATA'
     UV = 'UV'
+    GHOST = 'GHOST_ENABLED'
 
 
 @dataclass(frozen=True)

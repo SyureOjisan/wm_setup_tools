@@ -367,7 +367,7 @@ class LayoutCommandName(LayoutItem):
 
 class LayoutProperty:
     @staticmethod
-    def put(layout, scope_type, scene, num_properties):
+    def put(layout: bpy.types.UILayout, scope_type, scene, num_properties):
         scope_type_icon = scope_type.icon_data()
 
         # property name : candidates, icon, position
@@ -403,7 +403,15 @@ class LayoutProperty:
                         column.prop(command, property_name, text='Merge distance', icon=icon_name)
                         break
                     if property_name in dir(command):
-                        column.prop_search(command, property_name, command, candidates_name, text='', icon=icon_name)
+                        prop = getattr(command, property_name)
+                        candidates = getattr(command, candidates_name)
+                        is_exist_property = prop in [candidate.name for candidate in candidates]
+                                
+                        row = column.row()
+                        row.alert = not is_exist_property
+                        if not is_exist_property:
+                            row.label(icon=Icon.GHOST)
+                        row.prop_search(command, property_name, command, candidates_name, text='', icon=icon_name)
                         break
 
 
