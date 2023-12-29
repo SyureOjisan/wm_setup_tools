@@ -16,6 +16,9 @@
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
 import csv
+
+from . import debug
+
 from .syntax import SAMKProfileError, Syntax
 
 

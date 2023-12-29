@@ -15,11 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
-from abc import ABC, abstractmethod
-from logging import getLogger
 import bpy
 
+from abc import ABC, abstractmethod
+
 from bpy.types import Operator
+
+from .. import debug
 
 from ..setting.setting_check import check_data
 
@@ -27,16 +29,21 @@ from ..syntax import Icon, Props, SAMKStructureError, SAMKSyntaxError, Syntax, S
 
 from ..function import set_active_only
 
+import logging
+
 from ..setup import setup_collection as sucoll
 
 from ..setting.setting_command import SAMK_OT_AddCommand, SAMK_OT_RemoveCommand, ScopeType, current_scope
 
-module_logger = getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+
+logger = logging.getLogger(f'{Syntax.TOOLNAME}')
+
 
 class SAMK_OT_AddSpec(Operator):
     bl_idname = 'samk.add_spec'
     bl_label = 'Add new spec'
 
+    @debug.debug_execute(logger)
     def execute(self, context):
         scene = context.scene
         if self.is_already_exist_spec(context):
@@ -50,6 +57,7 @@ class SAMK_OT_AddSpec(Operator):
         context.scene.samk.specs_enum = new_spec.name
         return {'FINISHED'}
 
+    @debug.debug_invoke(logger)
     def invoke(self, context, event):
         scene = context.scene
         scene.samk.new_spec_name = ''
@@ -94,6 +102,7 @@ class SAMK_OT_RemoveSpec(Operator):
     def poll(cls, context):
         return context.scene.samk.specs and (context.scene.samk.specs_enum != SYS_SPECS.DEFAULTONLY)
 
+    @debug.debug_execute(logger)
     def execute(self, context: bpy.context):
         samk_specs = context.scene.samk.specs        
         for index, samk_spec in enumerate(samk_specs):
@@ -118,6 +127,7 @@ class SAMK_OT_LoadSpecs(Operator):
     def poll(cls, context):
         return context.scene.samk.specs
 
+    @debug.debug_execute(logger)
     def execute(self, context):
         # do something
 
@@ -216,6 +226,7 @@ class SAMK_OT_SetupOutliner(bpy.types.Operator):
                 return True
         return False
 
+    @debug.debug_execute(logger)
     def execute(self, context):
         scene = context.scene
 
@@ -224,6 +235,7 @@ class SAMK_OT_SetupOutliner(bpy.types.Operator):
 
         return {'FINISHED'}
 
+    @debug.debug_invoke(logger)
     def invoke(self, context, event):
         self.is_error = False
         try:
@@ -429,6 +441,7 @@ class SAMK_OT_CheckData(bpy.types.Operator):
         except AttributeError:
             return False
 
+    @debug.debug_execute(logger)
     def execute(self, context):
         scene = context.scene
 
@@ -437,8 +450,8 @@ class SAMK_OT_CheckData(bpy.types.Operator):
 
         return {'FINISHED'}
 
+    @debug.debug_invoke(logger)
     def invoke(self, context: bpy.context, event):
-        module_logger.info(f'Start operator\'s invoke : {self.bl_idname}')
         try:
             self.root_collection = check_data(context.active_object)
         except SAMKStructureError as e:
@@ -453,7 +466,6 @@ class SAMK_OT_CheckData(bpy.types.Operator):
 
         scene = context.scene
         wm = context.window_manager
-        module_logger.info(f'Finished operator\'s invoke : {self.bl_idname}')
         return wm.invoke_props_dialog(self, width=700)
 
     def draw(self, context: bpy.context):

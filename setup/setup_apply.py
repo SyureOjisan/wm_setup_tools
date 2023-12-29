@@ -16,9 +16,16 @@
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+
 from ..function import clear_shape_keys, clone_object, delete_object, get_active_object, select_object, set_active_object, update_progress
 
-from ..syntax import SAMKStructureError
+import logging
+
+from ..syntax import SAMKStructureError, Syntax
+
+
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+
 
 # Original Author : mato.sus304
 
@@ -107,6 +114,7 @@ def apply_modifier(target_object=None, target_modifiers=None, tmpcoll=None):
 
         update_progress(
             'Object \'' + obj_src.name + '\' Apply', i / len(obj_src.data.shape_keys.key_blocks))
+        logger.info(f'Object \'{obj_src.name}\' Apply : {i} / {len(obj_src.data.shape_keys.key_blocks)}')
     update_progress('Object \'' + obj_src.name + '\' Apply', 1)
 
     # modified by SyureOjisan

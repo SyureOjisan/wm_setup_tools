@@ -15,34 +15,38 @@
 # You should have received a copy of the GNU General Public License
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
-from logging.handlers import RotatingFileHandler
 import bpy
 
-from logging import DEBUG, Formatter, getLogger
+from bpy.props import EnumProperty
+
+from . import debug
 
 from .setting.setting_check import check_data
 
 from .file import check_profile
 
-from .function import exclude_coll, hide_coll, is_valid_objects, loop_process, select_object, set_active_object, set_active_only
+from .function import copy_nonlink, exclude_coll, hide_coll, is_valid_objects, loop_process, select_object, set_active_object, set_active_only
+
+import logging
 
 from .setup.setup_execute import SetupExecution
 
 from .setup.setup_queue import SetupAllQueue, SetupQueue
 
+# do not delete
+from .setup.setup_strategy import CleanupRelease_SK, CleanupRelease, CleanupRelease_VG, \
+    MTReplaceForTranslating, Strategy_MDF_Delete, Strategy_MDF_Undivision, Strategy_MT_Replace, Strategy_SK_ApplySingle, \
+    Strategy_UV_Select, Strategy_VG_DeleteLoop, Strategy_VG_DeleteVertex, Strategy_VG_MergeVertexSource, \
+    Strategy_VG_MergeVertexDestination
+
+from .setup.setup_strategy import strategy_classes_callback
+
 from .syntax import SAMKProfileError, SAMKStructureError, SAMKSyntaxError, Syntax
 
 from .translate import do_translate
 
-logger = getLogger(Syntax.TOOLNAME)
-logger.setLevel(DEBUG)
 
-fh = RotatingFileHandler(filename=f'{Syntax.TOOLNAME}.log', mode='w', maxBytes=1000000, backupCount=3, encoding='utf-8')
-fh.setLevel(DEBUG)
-formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-
-logger.addHandler(fh)
+logger = logging.getLogger(f'{Syntax.TOOLNAME}')
 
 
 class SAMKAbstractSetUp(bpy.types.Operator):
@@ -62,11 +66,13 @@ class SAMKAbstractSetUp(bpy.types.Operator):
         except AttributeError:
             return False
 
+    @debug.debug_execute(logger)
     def execute(self, context):
-        logger.info(f'Start operator : {self.bl_idname}')
         scene = context.scene
 
         if self.can_setup:
+            logger.info(f'Start operator : {self.bl_idname}')
+
             obj = context.active_object
 
             queue = self.SetupQueueClass(obj)
@@ -95,12 +101,15 @@ class SAMKAbstractSetUp(bpy.types.Operator):
         try:
             check_data(context.active_object)
         except SAMKStructureError as e:
+            logger.info(f'{SAMKStructureError.__name__} : {e}')
             self.error_code = e
             self.can_setup = False
         except SAMKSyntaxError as e:
+            logger.info(f'{SAMKSyntaxError.__name__} : {e}')
             self.error_code = e
             self.can_setup = False
         else:
+            logger.info('No error occurred.')
             self.error_code = 'No error occurred.'
             self.can_setup = True
 
@@ -181,15 +190,17 @@ class SAMK_OT_Translate(bpy.types.Operator):
         condition = (is_enabled_profile_bgroup, is_enabled_profile_skey, is_valid_objects(context, Syntax.OBJ_RELEASE))
         return all(condition)
 
+    @debug.debug_execute(logger)
     def execute(self, context):
         logger.info(f'Start operator : {self.bl_idname}')
+
         objects = context.selected_objects
         try:
             translated_objects_name = do_translate(objects)
         except SAMKStructureError as e:
             self.report({'WARNING'}, f'WM Setup Tools: Object structure error occurred. :\'{e}\'')
             print(f'Operator \'{self.bl_idname}\' is aborted')
-            logger.warning(f'Translation error occurred. operator : {self.bl_idname}')
+            logger.info(f'Translation error occurred. operator : {self.bl_idname}')
 
             return {'FINISHED'}
 
@@ -230,8 +241,8 @@ class SAMK_OT_FeedBack(bpy.types.Operator):
 
         return is_valid_objects(context, postfix)
 
+    @debug.debug_execute(logger)
     def execute(self, context):
-        logger.info(f'Start operator : {self.bl_idname}')
         @loop_process
         def feedback_core(trans_obj):
             trans_obj_name = trans_obj.name
@@ -293,13 +304,15 @@ class SAMK_OT_FeedBack(bpy.types.Operator):
 
             return container_new
 
+        logger.info(f'Start operator : {self.bl_idname}')
+
         objects = context.selected_objects
         try:
             containers_new_name = feedback_core(objects)
         except SAMKStructureError as e:
             self.report({'WARNING'}, f'WM Setup Tools: Object structure error occurred. :\'{e}\'')
             print(f'Operator \'{self.bl_idname}\' is aborted')
-            logger.warning(f'Feedback error occurred. operator : {self.bl_idname}')
+            logger.info(f'Feedback error occurred. operator : {self.bl_idname}')
 
             return {'FINISHED'}
 
@@ -320,8 +333,10 @@ class ReadProfile(bpy.types.Operator):
 
     profile = None
 
+    @debug.debug_execute(logger)
     def execute(self, context):
         logger.info(f'Start operator : {self.bl_idname}')
+
         if not self.profile:
             raise SAMKProfileError('Internal Error. Kind of profile is not selected.')
 
@@ -332,7 +347,7 @@ class ReadProfile(bpy.types.Operator):
         except SAMKProfileError as e:
             self.report({'WARNING'}, f'WM Setup Tools : {self.profile_type.capitalize()} Profile, {e}')
             self.profile.file_path = '(Load Error)'
-            logger.warning(f'Read file error occurred. operator : {self.__class__.__name__}')
+            logger.info(f'Read file error occurred. operator : {self.__class__.__name__}')
             return {'FINISHED'}
 
         self.profile.is_syntax_ok = True
@@ -392,6 +407,7 @@ class NewCollection(bpy.types.Operator):
 
     def execute(self, context):
         logger.info(f'Start operator : {self.bl_idname}')
+        
         scene = context.scene
 
         new_collection = bpy.data.collections.new(self.COLLECTION_PREFIX + 'NewSetupCollection')
@@ -423,6 +439,80 @@ class SAMK_OT_NewSubSourceCollection(NewCollection):
     COLLECTION_PREFIX = Syntax.COL_SUBSRC
 
 
+# operator for debug
+class SAMK_OT_DebugStrategy(bpy.types.Operator):
+
+    bl_idname = 'samk.debugstrategy'
+    bl_label = 'Debug strategy'
+    bl_description = 'Debug strategy'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    debug_strategy: EnumProperty(
+        name='Debug Strategy',
+        description='Debug Strategy',
+        items=strategy_classes_callback
+    )
+
+    @classmethod
+    def poll(cls, context: bpy.context):
+        scene = context.scene
+
+        return len(context.selected_objects) == 1
+
+    @debug.debug_execute(logger)
+    def execute(self, context: bpy.context):
+        logger.info(f'Start operator : {self.bl_idname}')
+
+        collection = context.scene.collection
+        act_obj = context.active_object
+        obj = copy_nonlink(act_obj)
+        collection.objects.link(obj)
+        obj.name = 'debug_result_object_' + self.debug_strategy
+
+        debug_strategy = globals()[self.debug_strategy]
+        debug_strategy(obj).execute()
+
+        self.report({'INFO'}, f'WM Setup Tools: debug {self.debug_strategy}')
+        print(f'Operator \'{self.bl_idname}\' is executed')
+        logger.info(f'Finished operator : {self.bl_idname}')
+
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        scene = context.scene
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+
+
+class SAMK_OT_DebugQueue(bpy.types.Operator):
+
+    bl_idname = 'samk.debugqueue'
+    bl_label = 'Debug queue'
+    bl_description = 'Debug queue'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context: bpy.context):
+        scene = context.scene
+
+        return len(context.selected_objects) == 1
+
+    @debug.debug_execute(logger)
+    def execute(self, context: bpy.context):
+        logger.info(f'Start operator : {self.bl_idname}')
+
+        obj = context.active_object
+
+        queue = SetupQueue(obj)
+        order = queue.get_order()
+
+        self.report({'INFO'}, f'WM Setup Tools: debug queue / order : {[od.name for od in order]}')
+        print(f'Operator \'{self.bl_idname}\' is executed')
+        logger.info(f'Finished operator : {self.bl_idname}')
+
+        return {'FINISHED'}
+
+
 classes = [
     SAMK_OT_SetUp,
     SAMK_OT_SetUpAll,
@@ -432,4 +522,6 @@ classes = [
     SAMK_OT_ProfileShapeKey,
     SAMK_OT_NewSourceCollection,
     SAMK_OT_NewSubSourceCollection,
+    SAMK_OT_DebugStrategy,
+    SAMK_OT_DebugQueue,
 ]

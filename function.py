@@ -16,11 +16,21 @@
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+
 import bmesh
+
+from . import debug
+
 from functools import wraps
+
+import logging
+
 import sys
 
 from .syntax import SAMKStructureError, Syntax
+
+
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
 
 
 def select_object(obj, value):

@@ -15,17 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
-from abc import ABC, abstractmethod
-from logging import getLogger
 import bpy
+
+from abc import ABC, abstractmethod
+
 from ..function import exclude_coll, hide_coll, root_name_in
+
+import logging
 
 from ..setup import setup_objects as suobj
 
 from ..syntax import SAMKStructureError, Syntax, postfix_parser, collection_parser
 
 
-module_logger = getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
 
 
 # Abstract Factory Pattern
@@ -38,11 +41,9 @@ class CollectionStatus(ABC):
 
     def __init__(self, real_collection: bpy.types.Collection, character_name: str) -> None:
         super().__init__()
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self._collection = real_collection
         self._character_name = character_name
         self.name = real_collection.name
-        module_logger.info(f'Collection name : {self.name}')
         # self.exclude(False)
 
     def migrate(self):
@@ -183,13 +184,13 @@ class SetupCollection(ABC):
 
     def __init__(self, collection_status: CollectionStatus) -> None:
         super().__init__()
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self.collection_status = collection_status
         self._collection = self.collection_status.real
         self.name = self.collection_status.name
         self._character_name = self.collection_status.character_name
         
-        module_logger.info(f'Collection name : {self.name}')
+        logger.info(f'Collection name : {self.name}')
 
         self.exclude(False)
 
@@ -212,7 +213,7 @@ class SetupCollection(ABC):
         hide_coll(self._collection.name, is_exclude)
 
     def setup(self):
-        module_logger.info(f'Start setup collection : {self.name}')
+        logger.info(f'Start setup collection : {self.name}')
         tmp_collection = TemporaryCollection(Syntax.COL_TMP)
 
         self.child_release_objects = tuple(suobj.ChildReleaseObject(obj.real, tmp_collection) for obj in self.collection_status.child_release_objects)
@@ -237,7 +238,7 @@ class SetupCollection(ABC):
 
         del tmp_collection
 
-        module_logger.info(f'Finished setup collection : {self.name}')
+        logger.info(f'Finished setup collection : {self.name}')
 
         return new_release_obj.real
 
@@ -402,14 +403,14 @@ class CollectionFactory:
 class NewCollection(ABC):
     def __init__(self, collection_name: str):
         super().__init__()
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self._name = collection_name
         new_collection = bpy.data.collections.new(self._name)
         bpy.context.scene.collection.children.link(new_collection)
         self._collection = new_collection
 
         
-        module_logger.info(f'Collection name : {self.name}')
+        logger.info(f'Collection name : {self.name}')
 
         self.exclude(False)
 
@@ -432,5 +433,5 @@ class NewReleaseCollection(NewCollection):
 
 class TemporaryCollection(NewCollection):
     def __del__(self):
-        module_logger.info(f'Delete temporary collection name : {self.name}')
+        logger.info(f'Delete temporary collection name : {self.name}')
         bpy.data.collections.remove(self._collection)

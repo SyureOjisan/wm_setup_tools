@@ -23,9 +23,7 @@ from bpy.types import Panel, PropertyGroup
 
 from .setting.setting_operators import SAMK_OT_CheckData, SAMK_OT_RemoveSpec, SAMK_OT_LoadSpecs, SAMK_OT_AddSpec, SAMK_OT_SetupOutliner
 
-from .debug import SAMK_OT_DebugQueue, SAMK_OT_DebugStrategy
-
-from .operators import SAMK_OT_FeedBack, SAMK_OT_ProfileShapeKey, SAMK_OT_ProfileBoneGroup, SAMK_OT_SetUp, SAMK_OT_SetUpAll, SAMK_OT_Translate
+from .operators import SAMK_OT_FeedBack, SAMK_OT_ProfileShapeKey, SAMK_OT_ProfileBoneGroup, SAMK_OT_SetUp, SAMK_OT_SetUpAll, SAMK_OT_Translate, SAMK_OT_DebugQueue, SAMK_OT_DebugStrategy
 
 from .syntax import Syntax
 

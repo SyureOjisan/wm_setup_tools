@@ -15,25 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
-from logging import getLogger
 import bpy
 
-from ..syntax import Syntax
+import logging
 
 from .setup_collection import CollectionStatus, SetupCollection
 
+from ..syntax import Syntax
 
-module_logger = getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
 
 
 class SetupExecution:
     def __init__(self, order: tuple[CollectionStatus]) -> bpy.types.Object:
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self.order = order
 
     def execute(self):
         for collection in reversed(self.order):
-            module_logger.info(f'Setup collection : {collection.name}')
+            logger.info(f'Setup collection : {collection.name}')
             # MemberObjectからSourceObjectとChildReleaseObjectに、CollectionStatusからSetupCollectionに移行・生成。
             setup_collection: SetupCollection = collection.migrate()
             release_obj = setup_collection.setup()

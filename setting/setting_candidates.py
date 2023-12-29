@@ -15,8 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
-from abc import ABC, abstractmethod
 import bpy
+
+from abc import ABC, abstractmethod
 
 from ..setup import setup_collection
 

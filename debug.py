@@ -15,86 +15,64 @@
 # You should have received a copy of the GNU General Public License
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
-import bpy
-from bpy.props import EnumProperty
 
-from .function import copy_nonlink
+import logging
 
-from .setup.setup_queue import SetupQueue
+from logging.handlers import RotatingFileHandler
 
-# do not delete
-from .setup.setup_strategy import CleanupRelease_SK, CleanupRelease, CleanupRelease_VG, \
-    MTReplaceForTranslating, Strategy_MDF_Delete, Strategy_MDF_Undivision, Strategy_MT_Replace, Strategy_SK_ApplySingle, \
-    Strategy_UV_Select, Strategy_VG_DeleteLoop, Strategy_VG_DeleteVertex, Strategy_VG_MergeVertexSource, \
-    Strategy_VG_MergeVertexDestination, strategy_classes_callback
+from .syntax import Syntax
 
+class LoggingContext:
+    def __init__(self, logger, level=None, handler=None, close=True):
+        self.logger = logger
+        self.level = level
+        self.handler = handler
+        self.close = close
 
-class SAMK_OT_DebugStrategy(bpy.types.Operator):
+    def __enter__(self):
+        if self.level is not None:
+            self.old_level = self.logger.level
+            self.logger.setLevel(self.level)
+        if self.handler:
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            self.handler.setFormatter(formatter)
+            self.logger.addHandler(self.handler)
 
-    bl_idname = 'samk.debugstrategy'
-    bl_label = 'Debug strategy'
-    bl_description = 'Debug strategy'
-    bl_options = {'REGISTER', 'UNDO'}
-
-    debug_strategy: EnumProperty(
-        name='Debug Strategy',
-        description='Debug Strategy',
-        items=strategy_classes_callback
-    )
-
-    @classmethod
-    def poll(cls, context: bpy.context):
-        scene = context.scene
-
-        return len(context.selected_objects) == 1
-
-    def execute(self, context: bpy.context):
-        collection = context.scene.collection
-        act_obj = context.active_object
-        obj = copy_nonlink(act_obj)
-        collection.objects.link(obj)
-        obj.name = 'debug_result_object_' + self.debug_strategy
-
-        debug_strategy = globals()[self.debug_strategy]
-        debug_strategy(obj).execute()
-
-        self.report({'INFO'}, f'WM Setup Tools: debug {self.debug_strategy}')
-        print(f'Operator \'{self.bl_idname}\' is executed')
-
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        scene = context.scene
-        wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+    def __exit__(self, et, ev, tb):
+        if self.level is not None:
+            self.logger.setLevel(self.old_level)
+        if self.handler:
+            self.logger.removeHandler(self.handler)
+        if self.handler and self.close:
+            self.handler.close()
 
 
-class SAMK_OT_DebugQueue(bpy.types.Operator):
+def debug_execute(logger):
+    def __func_wrapper(func):
+        def __wrapper(self, context):
+            fh = RotatingFileHandler(filename=f'{Syntax.TOOLNAME}_{self.__class__.__name__}.log', mode='w', maxBytes=1000000, encoding='utf-8')
+            
+            with LoggingContext(logger, level=logging.DEBUG, handler=fh) as _:            
+                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                fh.setFormatter(formatter)
 
-    bl_idname = 'samk.debugqueue'
-    bl_label = 'Debug queue'
-    bl_description = 'Debug queue'
-    bl_options = {'REGISTER', 'UNDO'}
+                return func(self, context)
 
-    @classmethod
-    def poll(cls, context: bpy.context):
-        scene = context.scene
+        return __wrapper 
 
-        return len(context.selected_objects) == 1
-
-    def execute(self, context: bpy.context):
-        obj = context.active_object
-
-        queue = SetupQueue(obj)
-        order = queue.get_order()
-
-        self.report({'INFO'}, f'WM Setup Tools: debug queue / order : {[od.name for od in order]}')
-        print(f'Operator \'{self.bl_idname}\' is executed')
-
-        return {'FINISHED'}
+    return __func_wrapper
 
 
-classes = [
-    SAMK_OT_DebugStrategy,
-    SAMK_OT_DebugQueue,
-]
+def debug_invoke(logger):
+    def __func_wrapper(func):
+        def __wrapper(self, context, event):
+            fh = RotatingFileHandler(filename=f'{Syntax.TOOLNAME}_{self.__class__.__name__}.log', mode='w', maxBytes=1000000, encoding='utf-8')
+            
+            with LoggingContext(logger, level=logging.DEBUG, handler=fh) as _:            
+                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                fh.setFormatter(formatter)
+
+                return func(self, context, event)
+
+        return __wrapper   
+    return __func_wrapper
