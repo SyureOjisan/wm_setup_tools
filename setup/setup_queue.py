@@ -63,7 +63,7 @@ class AbstractSetupQueue(ABC):
         pass
 
     @abstractmethod
-    def setup_condition(self, current_collection, recursive_count) -> bool:
+    def setup_condition(self, current_collection: CollectionStatus, recursive_count) -> bool:
         pass
 
 
@@ -81,7 +81,7 @@ class SetupQueue(AbstractSetupQueue):
 
         return tuple(order)
 
-    def setup_condition(self, current_collection, recursive_count) -> bool:
+    def setup_condition(self, current_collection: CollectionStatus, recursive_count) -> bool:
 
         should_append_to_order = bool()
 
@@ -107,12 +107,20 @@ class SetupQueue(AbstractSetupQueue):
         else:
             logger.info(f'[{current_collection.name}] setup of this collection tree is not required.')
 
-        if recursive_count == 0:
-            # 選択したオブジェクトがある階層のコレクションは、必ずセットアップする
-            logger.info(f'[{current_collection.name}] Setup collection with selected objects are always set up.')
+        if (recursive_count == 0) and not current_collection.is_pure_abstract_root:
+            # 選択したオブジェクトがある階層のコレクションは、ピュアアブストラクトルートコレクションである場合を除きセットアップする
+            logger.info(f'[{current_collection.name}] Setup collection with selected objects are set up unless it is a pure abstract root collection')
             should_append_to_order = True
         else:
             logger.info(f'[{current_collection.name}] No setup is required for this collection as it is the second or later tier collection.')
+
+        if (not current_collection.is_root) and current_collection.parent_collection.is_pure_abstract_root:
+            # 親コレクションがソースオブジェクトが無くソースコレクションしかないルートソースコレクションの場合は、セットアップする
+            logger.info(f'[{current_collection.name}] If the parent collection is a root source collection with no source objects and only source collections, set up')
+            should_append_to_order = True
+        else:
+            logger.info(f'[{current_collection.name}] Parent collection is not the pure abstract root collection, so setup is skipped.')
+            
 
         return should_append_to_order
 
@@ -126,6 +134,6 @@ class SetupAllQueue(AbstractSetupQueue):
 
         return tuple(order)
 
-    def setup_condition(self, current_collection, recursive_count) -> bool:
+    def setup_condition(self, current_collection: CollectionStatus, recursive_count) -> bool:
         logger.info(f'[{current_collection.name}] Setup Collections are always set up in Setup All operator.')
         return True

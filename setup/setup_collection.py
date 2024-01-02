@@ -67,6 +67,23 @@ class CollectionStatus(ABC):
         member_collections = tuple(CollectionFactory.create_collection(collection) for collection in self._collection.children)
         return member_collections
 
+    @property
+    def is_abstract(self):
+        return SubSourceCollectionStatus not in [type(collection) for collection in self.member_collections]
+
+    @property
+    def is_root(self):
+        return self.name in [root_source_collection.name for root_source_collection in CollectionFactory.root_source_colletions(bpy.context.scene.collection)]
+
+    @property
+    def has_no_source_object(self):
+        return len(self.source_objects) == 0
+
+    @property
+    def is_pure_abstract_root(self):
+        return self.is_abstract and self.is_root and self.has_no_source_object
+        
+
     @staticmethod
     def _create_member_objects(objects):
         return set(suobj.MemberObjectStatus(obj) for obj in objects)

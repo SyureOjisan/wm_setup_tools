@@ -21,7 +21,7 @@ from abc import ABC
 
 from . import setup_collection as sucoll
 
-from ..function import copy_nonlink, create_new_mesh_obj, delete_object_ops, select_object, set_active_object
+from ..function import copy_nonlink, create_new_mesh_obj, delete_object, select_object, set_active_object
 
 import logging
 
@@ -108,11 +108,25 @@ class SetupObject(ABC):
     def merge_to(self, new_release_obj: NewReleaseObject):
         logger.info(f'Merge object : {self._obj.name} -> {new_release_obj.real.name}')
         bpy.ops.object.select_all(action='DESELECT')
+        orphan_mesh_name = self._obj.data.name
+        logger.info(f'merged mesh name : {orphan_mesh_name}')
         select_object(self._obj, True)
         select_object(new_release_obj.real, True)
         set_active_object(new_release_obj.real)
         bpy.ops.object.join()
+        
+        tmp_collection = sucoll.TemporaryCollection(Syntax.COL_TMP)
+
+        orphan_obj = bpy.data.objects.new(orphan_mesh_name, bpy.data.meshes[orphan_mesh_name])
+        tmp_collection.real.objects.link(orphan_obj)
+
+        logger.info(f'Deleted orphan object name : {orphan_obj.name}')
+        logger.info(f'Deleted orphan mesh name (must be equal to merged mesh) : {orphan_obj.data.name}')
+        delete_object(orphan_obj)
+        
         bpy.ops.object.select_all(action='DESELECT')
+        
+        del tmp_collection
 
 
 class SourceObject(SetupObject):
@@ -133,6 +147,8 @@ class SourceObject(SetupObject):
 
         sust.CleanupPropertySource_SK(self).execute()
         sust.CleanupPropertySource_VG(self).execute()
+        
+        logger.info(f'Source object name(do_strategy) : {self._obj.name}')
 
         del tmp_collection
 
@@ -144,7 +160,7 @@ class ChildReleaseObject(SetupObject):
 class DeletableObject:
     def delete(self):
         logger.info(f'Delete object : {self.name}')
-        delete_object_ops(self._obj)
+        delete_object(self._obj)
 
 
 class ReleaseObjectClass(ABC):

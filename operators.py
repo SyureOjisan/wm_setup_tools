@@ -79,12 +79,13 @@ class SAMKAbstractSetUp(bpy.types.Operator):
             order = queue.get_order()
 
             execution = SetupExecution(order)
-            release_obj = execution.execute()
+            release_objects = execution.execute()
 
-            set_active_object(release_obj)
-            select_object(release_obj, True)
+            for obj in release_objects:
+                select_object(obj, True)
+            set_active_object(release_objects[-1])
 
-            self.report({'INFO'}, f'WM Setup Tools: Setup Model \'{release_obj.name}\'')
+            self.report({'INFO'}, f'WM Setup Tools: Setup Model \'{(obj.name for obj in release_objects)}\'')
             print(f'Operator \'{self.bl_idname}\' is executed')
             logger.info(f'Finished operator : {self.bl_idname}')
 
