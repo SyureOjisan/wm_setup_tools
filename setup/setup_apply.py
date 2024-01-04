@@ -16,9 +16,16 @@
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+
 from ..function import clear_shape_keys, clone_object, delete_object, get_active_object, select_object, set_active_object, update_progress
 
-from ..syntax import SAMKStructureError
+import logging
+
+from ..syntax import SAMKStructureError, Syntax
+
+
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+
 
 # Original Author : mato.sus304
 
@@ -31,6 +38,9 @@ def apply_modifier(target_object=None, target_modifiers=None, tmpcoll=None):
         set_active_object(obj_src)  # added by SyureOjisan
 
     if not obj_src.modifiers:
+        logger.info(f'no modifier')
+        logger.info(f'target_object(apply modifier) : {target_object}')
+        logger.info(f'obj_src(apply modifier) : {obj_src}')
         # if object has no modifier then skip
         return True
 
@@ -107,7 +117,9 @@ def apply_modifier(target_object=None, target_modifiers=None, tmpcoll=None):
 
         update_progress(
             'Object \'' + obj_src.name + '\' Apply', i / len(obj_src.data.shape_keys.key_blocks))
+        logger.info(f'Object \'{obj_src.name}\' / Mesh\'{obj_src.data.name}\' Apply : {i} / {len(obj_src.data.shape_keys.key_blocks)}')
     update_progress('Object \'' + obj_src.name + '\' Apply', 1)
+    logger.info(f'Object \'{obj_src.name}\' / Mesh\'{obj_src.data.name}\' Apply : {len(obj_src.data.shape_keys.key_blocks)} / {len(obj_src.data.shape_keys.key_blocks)}')
 
     # modified by SyureOjisan
 
@@ -115,11 +127,15 @@ def apply_modifier(target_object=None, target_modifiers=None, tmpcoll=None):
     tmp_data_name = obj_src.data.name
     obj_fin.name = tmp_name + '.tmp'
 
-    obj_src.data = obj_fin.data
+    obj_src.data, obj_fin.data = obj_fin.data, obj_src.data  # modified by SyureOjisan
     obj_src.data.name = tmp_data_name
 
     for x in target_modifiers:
         obj_src.modifiers.remove(obj_src.modifiers[x])
+
+    logger.info(f'target_object / mesh (apply modifier) : {target_object}, {target_object.data}')
+    logger.info(f'obj_fin / mesh (apply modifier) : {obj_fin}, {obj_fin.data}')
+    logger.info(f'obj_src / mesh (apply modifier) : {obj_src}, {obj_src.data}')
 
     delete_object(obj_fin)
     set_active_object(obj_src)

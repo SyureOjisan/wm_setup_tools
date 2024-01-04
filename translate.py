@@ -16,33 +16,33 @@
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
 from functools import wraps
-from logging import getLogger
+
 import bpy
 
 from .file import read_profile
 
-from .function import clear_shape_keys, copy_nonlink, create_new_mesh_obj, exclude_coll, root_name_in, select_object, set_active_object
+from .function import clear_shape_keys, copy_nonlink, create_new_mesh_obj, delete_object, exclude_coll, root_name_in, select_object, set_active_object
+
+import logging
 
 from .setup.setup_strategy import MTReplaceForTranslating
 
 from .syntax import SAMKStructureError, Syntax
 
 
-module_logger = getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
 
 
 def logger_deco(func):
     @wraps(func)
     def __wrapper(*args, **kwargs):
-        module_logger.info(f'Start Processing function : {__name__}')
+        logger.info(f'Start Processing function : {func.__name__}')
         ret = func(*args, **kwargs)
-        module_logger.info(f'Finished Processing function : {__name__}')
-        module_logger.info(f'Return value : {ret}')
+        logger.info(f'Finished Processing function : {func.__name__}')
         return ret
     return __wrapper
 
 
-@logger_deco
 def loop_postprocess(objects, should_select_object=False):
     bpy.ops.object.select_all(action='DESELECT')
     if should_select_object:
@@ -55,6 +55,7 @@ def loop_postprocess(objects, should_select_object=False):
     containers_new_name = '\'' + containers_new_name + '\''
 
     return containers_new_name
+
 
 @logger_deco
 def loop_process(func):
@@ -108,11 +109,7 @@ def translate_obj_check(obj, postfix):
     except KeyError:
         pass
     else:
-        bpy.ops.object.select_all(action='DESELECT')
-        select_object(released_obj_old, True)
-        set_active_object(released_obj_old)
-        bpy.ops.object.delete()
-        bpy.ops.object.select_all(action='DESELECT')
+        delete_object(released_obj_old)
 
     released_obj = copy_nonlink(released_obj_orig)
     collection_to.objects.link(released_obj)  # コレクションに移動
@@ -124,6 +121,7 @@ def translate_obj_check(obj, postfix):
     exclude_coll(collection_autogen.name, True)
 
     return released_obj, container, collection_to, collection_trans, src_name
+
 
 @logger_deco
 def translate_bonegroup(released_obj, bgroup_fpath):
@@ -167,6 +165,7 @@ def translate_bonegroup(released_obj, bgroup_fpath):
         for rename_vname in rename_list:
             vg.name = vg.name.replace(rename_vname[0], rename_vname[1])
 
+
 @logger_deco
 def translate_clear_shapekey(released_obj):
     bpy.ops.object.select_all(action='DESELECT')
@@ -174,6 +173,7 @@ def translate_clear_shapekey(released_obj):
     set_active_object(released_obj)
     clear_shape_keys(Syntax.MODE_SP[1:])
     bpy.ops.object.select_all(action='DESELECT')
+
 
 @logger_deco
 def translate_shapekey(released_obj, skey_fpath):
@@ -203,6 +203,7 @@ def translate_shapekey(released_obj, skey_fpath):
     pass
     # apply shape key(SPmode only)
 
+
 @logger_deco
 def translate_mat_replace(released_obj, postfix):
     # for idx, mtslot in enumerate(released_obj.material_slots):
@@ -213,8 +214,13 @@ def translate_mat_replace(released_obj, postfix):
     #     subprocess_mt_replace(released_obj, idx, mtslot, [mat_name_new])
     MTReplaceForTranslating(released_obj, postfix).execute()
 
+
 @logger_deco
 def translate_join(released_obj, container, collection_to, collection_trans, src_name, postfix):
+    # Join function should be defined in the future.
+    orphan_mesh_name = released_obj.data.name
+    logger.info(f'merged mesh name : {orphan_mesh_name}')
+
     bpy.ops.object.select_all(action='DESELECT')
     select_object(released_obj, True)
     select_object(container, True)
@@ -223,6 +229,13 @@ def translate_join(released_obj, container, collection_to, collection_trans, src
     bpy.ops.object.select_all(action='DESELECT')
     container.name = src_name + postfix
     container.data.name = src_name + postfix
+
+    orphan_release_obj = bpy.data.objects.new(orphan_mesh_name, bpy.data.meshes[orphan_mesh_name])
+    collection_to.objects.link(orphan_release_obj)
+
+    logger.info(f'Deleted orphan object name : {orphan_release_obj.name}')
+    logger.info(f'Deleted orphan mesh name (must be equal to merged mesh) : {orphan_release_obj.data.name}')
+    delete_object(orphan_release_obj)
 
     collection_trans.objects.link(container)  # オブジェクトをリリースコレクションに移動
     bpy.context.scene.collection.objects.unlink(container)
@@ -235,7 +248,7 @@ def translate_join(released_obj, container, collection_to, collection_trans, src
 
 @loop_process
 def do_translate(obj):
-    module_logger.info(f'Translation object : {obj.name}')
+    logger.info(f'Translation object : {obj.name}')
     scene = bpy.context.scene
     translate_mode = scene.samk.translation_mode
     bgroup_fpath = scene.samk.profile_bgroup.file_path
@@ -243,9 +256,9 @@ def do_translate(obj):
     bgroup_enable = scene.samk.profile_bgroup.is_enabled_translation
     skey_enable = scene.samk.profile_skey.is_enabled_translation
 
-    module_logger.info(f'Translation mode : {translate_mode}')
-    module_logger.info(f'Valid BoneGroup : {bgroup_enable}')
-    module_logger.info(f'Valid ShapeKey : {skey_enable}')
+    logger.info(f'Translation mode : {translate_mode}')
+    logger.info(f'Valid BoneGroup : {bgroup_enable}')
+    logger.info(f'Valid ShapeKey : {skey_enable}')
 
     if translate_mode != Syntax.MODE_UDEF:
         postfix = translate_mode

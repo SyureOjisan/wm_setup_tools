@@ -15,28 +15,28 @@
 # You should have received a copy of the GNU General Public License
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
-from abc import ABC
-from logging import getLogger
 import bpy
+
+from abc import ABC
 
 from . import setup_collection as sucoll
 
-from ..function import copy_nonlink, create_new_mesh_obj, delete_object_ops, select_object, set_active_object
+from ..function import copy_nonlink, create_new_mesh_obj, delete_object, select_object, set_active_object, set_active_only
+
+import logging
 
 from . import setup_strategy as sust
 
 from ..syntax import Syntax
 
 
-module_logger = getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
 
 
 class ObjectStatus(ABC):
     def __init__(self, real_obj: bpy.types.Object):
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self._obj = real_obj
         self.name = real_obj.name
-        module_logger.info(f'Object name : {self.name}')
 
     @property
     def real(self) -> bpy.types.Object:
@@ -57,9 +57,7 @@ class SubReleaseObjectStatus(ObjectStatus):
 
 class ObjectNotFound:
     def __init__(self, name):
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self.name = name
-        module_logger.info(f'Object name : {self.name}')
 
     def delete(self):
         pass
@@ -67,18 +65,18 @@ class ObjectNotFound:
 
 class NewReleaseObject:
     def __init__(self) -> None:
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         release_obj = create_new_mesh_obj(Syntax.OBJ_RELEASE_TMP)
         self.name = release_obj.name
         self._obj = release_obj
-        module_logger.info(f'Object name : {self.name}')
+        logger.info(f'Object name : {self.name}')
 
     @property
     def real(self) -> bpy.types.Object:
         return self._obj
 
     def cleanup(self):
-        module_logger.info(f'Cleanup object : {self.name}')
+        logger.info(f'Cleanup object : {self.name}')
         sust.Prefix_VG_MergeVertex(self._obj).execute()
         sust.CleanupRelease_SK(self._obj).execute()
         sust.CleanupRelease_VG(self._obj).execute()
@@ -86,17 +84,17 @@ class NewReleaseObject:
     def rename(self, character_name, postfix):
         self._obj.name = character_name + postfix
         self._obj.data.name = character_name + postfix
-        module_logger.info(f'Rename object : {self.name} -> {self._obj.name}')
+        logger.info(f'Rename object : {self.name} -> {self._obj.name}')
 
 
 class SetupObject(ABC):
     def __init__(self, real_obj: bpy.types.Object, tmp_collection):
         super().__init__()
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self.name = real_obj.name
         self._obj = self.copy(real_obj)
         tmp_collection.real.objects.link(self._obj)
-        module_logger.info(f'Object name : {self.name}')
+        logger.info(f'Object name : {self.name}')
 
     @property
     def real(self):
@@ -108,18 +106,35 @@ class SetupObject(ABC):
         return copy_obj
 
     def merge_to(self, new_release_obj: NewReleaseObject):
-        module_logger.info(f'Merge object : {self._obj.name} -> {new_release_obj.real.name}')
+        # Join function should be defined in the future.
+        logger.info(f'Merge object : {self._obj.name} -> {new_release_obj.real.name}')
         bpy.ops.object.select_all(action='DESELECT')
+        orphan_mesh_name = self._obj.data.name
+        logger.info(f'merged mesh name : {orphan_mesh_name}')
         select_object(self._obj, True)
         select_object(new_release_obj.real, True)
         set_active_object(new_release_obj.real)
         bpy.ops.object.join()
+        
+        tmp_collection = sucoll.TemporaryCollection(Syntax.COL_TMP)
+
+        orphan_obj = bpy.data.objects.new(orphan_mesh_name, bpy.data.meshes[orphan_mesh_name])
+        tmp_collection.real.objects.link(orphan_obj)
+
+        logger.info(f'Deleted orphan object name : {orphan_obj.name}')
+        logger.info(f'Deleted orphan mesh name (must be equal to merged mesh) : {orphan_obj.data.name}')
+        delete_object(orphan_obj)
+        
         bpy.ops.object.select_all(action='DESELECT')
+        
+        set_active_only(new_release_obj.real)
+        
+        del tmp_collection
 
 
 class SourceObject(SetupObject):
     def do_strategy(self):
-        module_logger.info(f'Do strategy object : {self.name}')
+        logger.info(f'Do strategy object : {self.name}')
         sust.Strategy_SK_ApplySingle(self).execute()
         sust.Strategy_VG_DeleteLoop(self).execute()
         sust.Strategy_MDF_Delete(self).execute()
@@ -135,6 +150,8 @@ class SourceObject(SetupObject):
 
         sust.CleanupPropertySource_SK(self).execute()
         sust.CleanupPropertySource_VG(self).execute()
+        
+        logger.info(f'Source object name(do_strategy) : {self._obj.name}')
 
         del tmp_collection
 
@@ -145,17 +162,17 @@ class ChildReleaseObject(SetupObject):
 
 class DeletableObject:
     def delete(self):
-        module_logger.info(f'Delete object : {self.name}')
-        delete_object_ops(self._obj)
+        logger.info(f'Delete object : {self.name}')
+        delete_object(self._obj)
 
 
 class ReleaseObjectClass(ABC):
     def __init__(self, real_obj: bpy.types.Object):
         super().__init__()
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self.name = real_obj.name
         self._obj = real_obj
-        module_logger.info(f'Object name : {self.name}')
+        logger.info(f'Object name : {self.name}')
 
     @property
     def real(self):

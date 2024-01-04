@@ -155,8 +155,7 @@ class SAMKAllProperty(PropertyGroup):
     )
 
 
-classes = debug.classes + \
-    interface.classes + \
+classes = interface.classes + \
     operators.classes + \
     preferences.classes + \
     setting.setting_command.classes + \

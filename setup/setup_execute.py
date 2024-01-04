@@ -15,26 +15,37 @@
 # You should have received a copy of the GNU General Public License
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
-from logging import getLogger
 import bpy
+
+import logging
+
+from .setup_collection import CollectionStatus, SourceCollectionStatus, SetupCollection
 
 from ..syntax import Syntax
 
-from .setup_collection import CollectionStatus, SetupCollection
 
-
-module_logger = getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
 
 
 class SetupExecution:
     def __init__(self, order: tuple[CollectionStatus]) -> bpy.types.Object:
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self.order = order
 
     def execute(self):
+        release_objects = list()
+        is_exist_pure_abstract_root_collection = False
         for collection in reversed(self.order):
-            module_logger.info(f'Setup collection : {collection.name}')
+            logger.info(f'Setup collection : {collection.name}')
             # MemberObjectからSourceObjectとChildReleaseObjectに、CollectionStatusからSetupCollectionに移行・生成。
             setup_collection: SetupCollection = collection.migrate()
+            if collection.is_pure_abstract_root:
+                is_exist_pure_abstract_root_collection = True
+                continue
             release_obj = setup_collection.setup()
-        return release_obj
+            if type(collection) is SourceCollectionStatus:
+                release_objects.append(release_obj)
+
+        if is_exist_pure_abstract_root_collection:
+            return tuple(release_objects)
+        return (release_obj, )

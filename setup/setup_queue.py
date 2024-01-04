@@ -16,8 +16,10 @@
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
 from abc import ABC, abstractmethod
-from logging import getLogger
+
 import bpy
+
+import logging
 
 from .setup_collection import CollectionFactory, CollectionStatus, SourceCollectionStatus, SubSourceCollectionStatus
 
@@ -26,13 +28,13 @@ from .setup_objects import ObjectNotFound
 from ..syntax import SAMKStructureError, Syntax
 
 
-module_logger = getLogger(f'{Syntax.TOOLNAME}.{__name__}')
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
 
 
 class AbstractSetupQueue(ABC):
     def __init__(self, obj: bpy.types.Object) -> None:
         super().__init__()
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self._obj = obj
 
     def queue(self, current_collection: CollectionStatus, recursive_count: int = 0) -> list[CollectionStatus]:
@@ -61,7 +63,7 @@ class AbstractSetupQueue(ABC):
         pass
 
     @abstractmethod
-    def setup_condition(self, current_collection, recursive_count) -> bool:
+    def setup_condition(self, current_collection: CollectionStatus, recursive_count) -> bool:
         pass
 
 
@@ -79,38 +81,46 @@ class SetupQueue(AbstractSetupQueue):
 
         return tuple(order)
 
-    def setup_condition(self, current_collection, recursive_count) -> bool:
+    def setup_condition(self, current_collection: CollectionStatus, recursive_count) -> bool:
 
         should_append_to_order = bool()
 
         release_object = current_collection.release_object
         if type(release_object) is ObjectNotFound:
             # リリースオブジェクトがどこにも無い場合は、セットアップする。
-            module_logger.info(f'[{current_collection.name}] release object\'{release_object.name}\' not found in anywhere. Setup collection will be added to setup queue.')
+            logger.info(f'[{current_collection.name}] release object\'{release_object.name}\' not found in anywhere. Setup collection will be added to setup queue.')
             should_append_to_order = True
         else:
-            module_logger.info(f'[{current_collection.name}] release object\'{release_object.name}\' found.')
+            logger.info(f'[{current_collection.name}] release object\'{release_object.name}\' found.')
 
         if current_collection.is_exist_release_object_in_strange_place:
             # リリースオブジェクトはあるけど関係のない別のコレクションにある場合はリリースオブジェクトを消去してからセットアップし直し
-            module_logger.info(f'[{current_collection.name}] release object\'{release_object.name}\' exist but not in release collection\'{current_collection.release_collection.name}\'. Delete the release object and add setup collection to the setup queue.')
+            logger.info(f'[{current_collection.name}] release object\'{release_object.name}\' exist but not in release collection\'{current_collection.release_collection.name}\'. Delete the release object and add setup collection to the setup queue.')
             should_append_to_order = True
         else:
-            module_logger.info(f'[{current_collection.name}] release object\'{release_object.name}\' exist in release collection\'{current_collection.release_collection.name}\'.')
+            logger.info(f'[{current_collection.name}] release object\'{release_object.name}\' exist in release collection\'{current_collection.release_collection.name}\'.')
 
         if current_collection.should_append_queue_in_this_tree:
             # 子コレクション以下の階層のコレクションのセットアップがされていない場合(リリースオブジェクトが無い)は芋づる式に親コレクションをセットアップ
-            module_logger.info(f'[{current_collection.name}] Because child collections of the setup collection are not set up, collections of the same tree are also added to the setup queue.')
+            logger.info(f'[{current_collection.name}] Because child collections of the setup collection are not set up, collections of the same tree are also added to the setup queue.')
             should_append_to_order = True
         else:
-            module_logger.info(f'[{current_collection.name}] setup of this collection tree is not required.')
+            logger.info(f'[{current_collection.name}] setup of this collection tree is not required.')
 
-        if recursive_count == 0:
-            # 選択したオブジェクトがある階層のコレクションは、必ずセットアップする
-            module_logger.info(f'[{current_collection.name}] Setup collection with selected objects are always set up.')
+        if (recursive_count == 0) and not current_collection.is_pure_abstract_root:
+            # 選択したオブジェクトがある階層のコレクションは、ピュアアブストラクトルートコレクションである場合を除きセットアップする
+            logger.info(f'[{current_collection.name}] Setup collection with selected objects are set up unless it is a pure abstract root collection')
             should_append_to_order = True
         else:
-            module_logger.info(f'[{current_collection.name}] No setup is required for this collection as it is the second or later tier collection.')
+            logger.info(f'[{current_collection.name}] No setup is required for this collection as it is the second or later tier collection.')
+
+        if (not current_collection.is_root) and current_collection.parent_collection.is_pure_abstract_root:
+            # 親コレクションがソースオブジェクトが無くソースコレクションしかないルートソースコレクションの場合は、セットアップする
+            logger.info(f'[{current_collection.name}] If the parent collection is a root source collection with no source objects and only source collections, set up')
+            should_append_to_order = True
+        else:
+            logger.info(f'[{current_collection.name}] Parent collection is not the pure abstract root collection, so setup is skipped.')
+            
 
         return should_append_to_order
 
@@ -124,6 +134,6 @@ class SetupAllQueue(AbstractSetupQueue):
 
         return tuple(order)
 
-    def setup_condition(self, current_collection, recursive_count) -> bool:
-        module_logger.info(f'[{current_collection.name}] Setup Collections are always set up in Setup All operator.')
+    def setup_condition(self, current_collection: CollectionStatus, recursive_count) -> bool:
+        logger.info(f'[{current_collection.name}] Setup Collections are always set up in Setup All operator.')
         return True

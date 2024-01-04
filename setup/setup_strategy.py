@@ -16,14 +16,16 @@
 # along with WM Setup Tools.  If not, see <http://www.gnu.org/licenses/>.
 
 from abc import ABC, abstractmethod
+
 from functools import wraps
-from logging import getLogger
 
 import bpy
 
 from ..setting import setting_command
 
 from . import setup_objects
+
+import logging
 
 from .setup_apply import apply_modifier
 
@@ -32,10 +34,7 @@ from ..function import apply_single, select_vert, set_active_object, set_active_
 from ..syntax import ALL_PROPS, Props, SAMKSyntaxError, Syntax, del_parser
 
 
-module_logger = getLogger(f'{Syntax.TOOLNAME}.{__name__}')
-
-
-# Strategy Pattern
+logger = logging.getLogger(f'{Syntax.TOOLNAME}.{__name__}')
 
 
 def mesh_operator(func):
@@ -60,7 +59,7 @@ class SetupStrategy(ABC):
         if type(obj) is not setup_objects.SourceObject:
             raise TypeError('')
         super().__init__()
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self._obj = obj.real
         self._obj_name = obj.name
         set_active_only(self._obj)
@@ -293,7 +292,7 @@ class Prefix_VG_MergeVertex:
     def __init__(self, obj: bpy.types.Object) -> None:
         self._obj = obj
         self._it = obj.vertex_groups
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
 
     @mesh_operator
     def execute_if_processing(self, idx, element: bpy.types.VertexGroup, source_obj_name, source_name, merge_distance):
@@ -305,7 +304,7 @@ class Prefix_VG_MergeVertex:
                 try:
                     self._obj.vertex_groups.active_index = element_destination.index
                 except KeyError:
-                    module_logger.info('Not destination prefix.')
+                    logger.info('Not destination prefix.')
                     pass
                 bpy.ops.object.vertex_group_select()
         bpy.ops.mesh.remove_doubles(threshold=merge_distance)
@@ -316,7 +315,7 @@ class Prefix_VG_MergeVertex:
             element_name = element.name
             splitted_name = element_name.split(Syntax.UNDER)
             if not element_name.startswith(Syntax.VG_MERGE_VTX_SRC):
-                module_logger.info('Not source prefix.')
+                logger.info('Not source prefix.')
                 continue
             if len(splitted_name) != 5:
                 raise SAMKSyntaxError('Invalid syntax.')
@@ -331,21 +330,21 @@ class Prefix_VG_MergeVertex:
             except ValueError as e:
                 raise SAMKSyntaxError(f'Not float number. code: {e}')
 
-            module_logger.info(f'Source object : {source_obj_name}, Source : {source_name}, Merge distance : {merge_distance}')
+            logger.info(f'Source object : {source_obj_name}, Source : {source_name}, Merge distance : {merge_distance}')
 
             self.execute_if_processing(idx, element, source_obj_name, source_name, merge_distance)
 
 
 class MTReplaceForTranslating:
     def __init__(self, obj: bpy.types.Object, postfix: str = '_postfixname') -> None:
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self._obj = obj
         set_active_only(self._obj)
         self._postfix = postfix
         self._it = self._obj.material_slots
 
     def execute(self):
-        module_logger.info(f'Do execute : {self.__class__.__name__}')
+        logger.info(f'Do execute : {self.__class__.__name__}')
         for idx, element in enumerate(self._it):
             mat_orig = element.material
             mat_name_new = mat_orig.name + self._postfix
@@ -359,7 +358,7 @@ class MTReplaceForTranslating:
 
 class CleanupPropertySource(ABC):
     def __init__(self, obj) -> None:
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         super().__init__()
         if type(obj) is not setup_objects.SourceObject:
             raise TypeError('')
@@ -371,7 +370,7 @@ class CleanupPropertySource(ABC):
         pass
 
     def execute(self):
-        module_logger.info(f'Do execute : {self.__class__.__name__}')
+        logger.info(f'Do execute : {self.__class__.__name__}')
         strategy_class_name = self.__class__.__name__
 
         bpy.context.scene.samk.scope_type_to_edit = strategy_class_name.lstrip('CleanupPropertySource').lstrip(Syntax.UNDER)
@@ -393,7 +392,7 @@ class CleanupPropertySource_SK(CleanupPropertySource):
             self._it = tuple()
 
     def execute_if_processing(self, element):
-        module_logger.info(f'Cleanp key : {element.name}')
+        logger.info(f'Cleanp key : {element.name}')
         self._obj.shape_key_remove(element)
 
 
@@ -403,7 +402,7 @@ class CleanupPropertySource_VG(CleanupPropertySource):
         self._it = self._obj.vertex_groups
 
     def execute_if_processing(self, element):
-        module_logger.info(f'Cleanp key : {element.name}')
+        logger.info(f'Cleanp key : {element.name}')
         self._it.active_index = element.index
         bpy.ops.object.vertex_group_remove()
 
@@ -411,7 +410,7 @@ class CleanupPropertySource_VG(CleanupPropertySource):
 class CleanupRelease(ABC):
     def __init__(self, obj: bpy.types.Object) -> None:
         super().__init__()
-        module_logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
+        logger.info(f'Start Initiating Instance : {self.__class__.__name__}')
         self._obj = obj
         set_active_only(self._obj)
         self._keys = (Syntax.P_HEADER, Syntax.DISABLED)
@@ -421,7 +420,7 @@ class CleanupRelease(ABC):
         pass
 
     def execute(self):
-        module_logger.info(f'Do execute : {self.__class__.__name__}')
+        logger.info(f'Do execute : {self.__class__.__name__}')
         del_parser(self._obj, self._it, self._keys, self.execute_if_processing)
 
 
@@ -434,7 +433,7 @@ class CleanupRelease_SK(CleanupRelease):
             self._it = tuple()
 
     def execute_if_processing(self, obj: bpy.types.Object, element):
-        module_logger.info(f'Cleanp key : {element.name}')
+        logger.info(f'Cleanp key : {element.name}')
         obj.shape_key_remove(element)
 
 
@@ -444,7 +443,7 @@ class CleanupRelease_VG(CleanupRelease):
         self._it = obj.vertex_groups
 
     def execute_if_processing(self, obj: bpy.types.Object, element):
-        module_logger.info(f'Cleanp key : {element.name}')
+        logger.info(f'Cleanp key : {element.name}')
         self._it.active_index = element.index
         bpy.ops.object.vertex_group_remove()
 
@@ -476,7 +475,7 @@ def strategy_classes_callback(scene, context):
 class Parser(ABC):
     @classmethod
     def parser(cls, setup_strategy_instance: SetupStrategy):
-        module_logger.info(f'Start Parser Class : {cls.__name__}')
+        logger.info(f'Start Parser Class : {cls.__name__}')
         cls.setup_strategy = setup_strategy_instance
         strategy_class_name = cls.setup_strategy.__class__.__name__
         command_property_name = strategy_class_name.lstrip('Strategy').lstrip(Syntax.UNDER).lower()
@@ -490,7 +489,7 @@ class Parser(ABC):
                 try:
                     properties_for_add[property_name] = getattr(command_source, property_name)
                 except AttributeError:
-                    module_logger.info(f'property \'{property_name}\' is not found, skipped.')
+                    logger.info(f'property \'{property_name}\' is not found, skipped.')
                     continue
                 commands[command_source.source] = properties_for_add
 
@@ -504,11 +503,11 @@ class Parser(ABC):
             try:
                 command = commands[element.name]
             except KeyError:
-                module_logger.info(f'source key \'{element.name}\' is not found in commands. \'do_process\' is set to False.')
+                logger.info(f'source key \'{element.name}\' is not found in commands. \'do_process\' is set to False.')
                 cls.do_process = False
                 command = None
             else:
-                module_logger.info(f'source key \'{element.name}\' is found in commands. \'do_process\' is set to True.')
+                logger.info(f'source key \'{element.name}\' is found in commands. \'do_process\' is set to True.')
                 cls.do_process = True
 
                 spec_name = command[Props.SPEC]
@@ -516,10 +515,10 @@ class Parser(ABC):
                 try:
                     cls.is_enabled_spec = specs[spec_name]
                 except KeyError:
-                    module_logger.info(f'spec \'{spec_name}\' is not found in specs. \'is_enabled_spec\' is set to False.')
+                    logger.info(f'spec \'{spec_name}\' is not found in specs. \'is_enabled_spec\' is set to False.')
                     cls.is_enabled_spec = False
                 else:
-                    module_logger.info(f'spec \'{spec_name}\' is found in specs. \'is_enabled_spec\' is set to {cls.is_enabled_spec}.')
+                    logger.info(f'spec \'{spec_name}\' is found in specs. \'is_enabled_spec\' is set to {cls.is_enabled_spec}.')
 
                 cls._eval_destination_mdf(command)
 
@@ -539,10 +538,10 @@ class Parser(ABC):
     def _execute_loop_part(cls, idx, element, command):
         if cls.do_process and cls.is_enabled_spec:
             cls.setup_strategy.execute_if_processing(idx, element, command)
-            module_logger.info(f'{cls.setup_strategy.__class__.__name__}\'s execute_if_processing func is executed.')
+            logger.info(f'{cls.setup_strategy.__class__.__name__}\'s execute_if_processing func is executed.')
             return
         cls.setup_strategy.execute_if_not_processing(idx, element, command)
-        module_logger.info(f'{cls.setup_strategy.__class__.__name__}\'s execute_if_not_processing func is executed.')
+        logger.info(f'{cls.setup_strategy.__class__.__name__}\'s execute_if_not_processing func is executed.')
 
     @classmethod
     @abstractmethod
@@ -561,10 +560,10 @@ class CommandParser(Parser):
     def _execute_loop_part(cls, idx, element, command):
         if cls.do_process and cls.is_enabled_spec:
             cls.setup_strategy.execute_if_processing(idx, element, command)
-            module_logger.info(f'{cls.setup_strategy.__class__.__name__}\'s execute_if_processing func is executed.')
+            logger.info(f'{cls.setup_strategy.__class__.__name__}\'s execute_if_processing func is executed.')
             return
         cls.setup_strategy.execute_if_not_processing(idx, element, command)
-        module_logger.info(f'{cls.setup_strategy.__class__.__name__}\'s execute_if_not_processing func is executed.')
+        logger.info(f'{cls.setup_strategy.__class__.__name__}\'s execute_if_not_processing func is executed.')
 
     @classmethod
     def _eval_destination_mdf(cls, command):
@@ -577,7 +576,7 @@ class NonDecimateParser(Parser):
         try:
             destination_mdf = command[Props.DST_MDF]
         except KeyError:
-            module_logger.info('Key \'destination_mdf\' is not found in command.')
+            logger.info('Key \'destination_mdf\' is not found in command.')
         else:
             elements_name = cls.setup_strategy.preview_instance.elements_name
             if len(elements_name) == 0:
@@ -587,12 +586,12 @@ class NonDecimateParser(Parser):
             else:
                 raise SAMKSyntaxError('The number of Subdivision modifiers with undivision command that can be set on an object is limited to one.')
 
-            module_logger.info(f'{destination_mdf}, {element_name}')
+            logger.info(f'{destination_mdf}, {element_name}')
             if destination_mdf == element_name:
                 cls.do_process = True
             else:
                 cls.do_process = False
-            module_logger.info(f'Key \'destination_mdf\' is found in command. \'do_process\' is set to {cls.do_process}.')
+            logger.info(f'Key \'destination_mdf\' is found in command. \'do_process\' is set to {cls.do_process}.')
 
 
 class ModifierParser(Parser):
@@ -620,11 +619,11 @@ class ModifierParser(Parser):
 
     @classmethod
     def _execute_postprocess(cls):
-        module_logger.info(f'Do execute keys : {cls.modifier_names_before_undiv}')
+        logger.info(f'Do execute keys : {cls.modifier_names_before_undiv}')
         cls.setup_strategy.execute_if_not_undiv(cls.modifier_names_before_undiv)
-        module_logger.info(f'Do execute keys : {cls.modifier_names_undiv}')
+        logger.info(f'Do execute keys : {cls.modifier_names_undiv}')
         cls.setup_strategy.execute_if_undiv(cls.modifier_names_undiv)
-        module_logger.info(f'Do execute keys : {cls.modifier_names_after_undiv}')
+        logger.info(f'Do execute keys : {cls.modifier_names_after_undiv}')
         cls.setup_strategy.execute_if_not_undiv(cls.modifier_names_after_undiv)
 
         bpy.ops.object.mode_set(mode='EDIT')
