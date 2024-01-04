@@ -85,7 +85,7 @@ class SAMKAbstractSetUp(bpy.types.Operator):
                 select_object(obj, True)
             set_active_object(release_objects[-1])
 
-            self.report({'INFO'}, f'WM Setup Tools: Setup Model \'{(obj.name for obj in release_objects)}\'')
+            self.report({'INFO'}, f'WM Setup Tools: Setup Model \'{tuple(obj.name for obj in release_objects)}\'')
             print(f'Operator \'{self.bl_idname}\' is executed')
             logger.info(f'Finished operator : {self.bl_idname}')
 
