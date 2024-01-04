@@ -67,14 +67,27 @@ def clone_object(obj):
     return tmp_obj
 
 
+def clear_all_materials(data: bpy.types.Mesh):
+    data.materials.clear()
+
+
 def delete_object(obj):
-    if obj.data.users == 1:
-        obj.data.user_clear()
-    for scn in bpy.data.scenes:
-        try:
-            scn.collection.objects.unlink(obj)
-        except Exception:
-            pass
+    logger.info(f'Deletion object name : {obj.name}')
+    clear_all_materials(obj.data)
+
+    bpy.ops.object.select_all(action='DESELECT')
+    select_object(obj, True)
+    set_active_object(obj)
+    bpy.ops.object.delete()
+    bpy.ops.object.select_all(action='DESELECT')
+
+    # if obj.data.users == 1:
+    #     obj.data.user_clear()
+    # for scn in bpy.data.scenes:
+    #     try:
+    #         scn.collection.objects.unlink(obj)
+    #     except Exception:
+    #         pass
 
 
 def set_active_only(obj):

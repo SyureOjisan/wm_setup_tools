@@ -25,7 +25,7 @@ from .setting.setting_check import check_data
 
 from .file import check_profile
 
-from .function import copy_nonlink, exclude_coll, hide_coll, is_valid_objects, loop_process, select_object, set_active_object, set_active_only
+from .function import copy_nonlink, exclude_coll, delete_object, hide_coll, is_valid_objects, loop_process, select_object, set_active_object, set_active_only
 
 import logging
 
@@ -79,12 +79,13 @@ class SAMKAbstractSetUp(bpy.types.Operator):
             order = queue.get_order()
 
             execution = SetupExecution(order)
-            release_obj = execution.execute()
+            release_objects = execution.execute()
 
-            set_active_object(release_obj)
-            select_object(release_obj, True)
+            for obj in release_objects:
+                select_object(obj, True)
+            set_active_object(release_objects[-1])
 
-            self.report({'INFO'}, f'WM Setup Tools: Setup Model \'{release_obj.name}\'')
+            self.report({'INFO'}, f'WM Setup Tools: Setup Model \'{tuple(obj.name for obj in release_objects)}\'')
             print(f'Operator \'{self.bl_idname}\' is executed')
             logger.info(f'Finished operator : {self.bl_idname}')
 
@@ -260,16 +261,12 @@ class SAMK_OT_FeedBack(bpy.types.Operator):
                 exclude_coll(coll.name, False)
                 hide_coll(coll.name, False)
 
-            bpy.ops.object.select_all(action='DESELECT')
             try:
                 container = bpy.data.objects[container_name]
             except KeyError:
                 pass
             else:
-                select_object(container, True)
-                set_active_object(container)
-                bpy.ops.object.delete()
-            bpy.ops.object.select_all(action='DESELECT')
+                delete_object(container)
 
             container_new = trans_obj.copy()
             container_new.data = trans_obj.data.copy()
