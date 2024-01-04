@@ -21,7 +21,7 @@ from abc import ABC
 
 from . import setup_collection as sucoll
 
-from ..function import copy_nonlink, create_new_mesh_obj, delete_object, select_object, set_active_object
+from ..function import copy_nonlink, create_new_mesh_obj, delete_object, select_object, set_active_object, set_active_only
 
 import logging
 
@@ -106,6 +106,7 @@ class SetupObject(ABC):
         return copy_obj
 
     def merge_to(self, new_release_obj: NewReleaseObject):
+        # Join function should be defined in the future.
         logger.info(f'Merge object : {self._obj.name} -> {new_release_obj.real.name}')
         bpy.ops.object.select_all(action='DESELECT')
         orphan_mesh_name = self._obj.data.name
@@ -125,6 +126,8 @@ class SetupObject(ABC):
         delete_object(orphan_obj)
         
         bpy.ops.object.select_all(action='DESELECT')
+        
+        set_active_only(new_release_obj.real)
         
         del tmp_collection
 

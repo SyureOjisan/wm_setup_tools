@@ -22,6 +22,8 @@ from logging.handlers import RotatingFileHandler
 
 from .syntax import Syntax
 
+import traceback
+
 class LoggingContext:
     def __init__(self, logger, level=None, handler=None, close=True):
         self.logger = logger
@@ -53,10 +55,12 @@ def debug_execute(logger):
             fh = RotatingFileHandler(filename=f'{Syntax.TOOLNAME}_{self.__class__.__name__}.log', mode='w', maxBytes=1000000, encoding='utf-8')
             
             with LoggingContext(logger, level=logging.DEBUG, handler=fh) as _:            
-                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-                fh.setFormatter(formatter)
-
-                return func(self, context)
+                try:
+                    return func(self, context)
+                except Exception as e:
+                    error_message = traceback.format_exc()
+                    logger.info(error_message)
+                    raise Exception(e)
 
         return __wrapper 
 
@@ -69,10 +73,12 @@ def debug_invoke(logger):
             fh = RotatingFileHandler(filename=f'{Syntax.TOOLNAME}_{self.__class__.__name__}.log', mode='w', maxBytes=1000000, encoding='utf-8')
             
             with LoggingContext(logger, level=logging.DEBUG, handler=fh) as _:            
-                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-                fh.setFormatter(formatter)
-
-                return func(self, context, event)
+                try:
+                    return func(self, context, event)
+                except Exception as e:
+                    error_message = traceback.format_exc()
+                    logger.info(error_message)
+                    raise Exception(e)
 
         return __wrapper   
     return __func_wrapper
