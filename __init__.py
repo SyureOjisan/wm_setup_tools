@@ -18,7 +18,7 @@
 bl_info = {
     'name': 'WM Setup Tools',
     'author': 'SyureOjisan',
-    'version': (1, 0, 0),  # big modifying, small modifying, bug fix or refactoring
+    'version': (1, 1, 0),  # big modifying, small modifying, bug fix or refactoring
     'blender': (2, 93, 0),
     'location': 'Properties > Object Data Properties',
     'description': 'Setup Tools for character modeling',
