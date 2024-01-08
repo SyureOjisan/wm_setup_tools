@@ -21,11 +21,11 @@ from bpy.props import BoolProperty, StringProperty
 
 from bpy.types import Panel, PropertyGroup
 
-from .setting.setting_operators import SAMK_OT_CheckData, SAMK_OT_RemoveSpec, SAMK_OT_LoadSpecs, SAMK_OT_AddSpec, SAMK_OT_SetupOutliner
+from .setting.setting_operators import SAMK_OT_CheckData, SAMK_OT_AddSpec, SAMK_OT_SetupOutliner, SAMK_UL_SpecList
 
 from .operators import SAMK_OT_FeedBack, SAMK_OT_ProfileShapeKey, SAMK_OT_ProfileBoneGroup, SAMK_OT_SetUp, SAMK_OT_SetUpAll, SAMK_OT_Translate, SAMK_OT_DebugQueue, SAMK_OT_DebugStrategy
 
-from .syntax import Syntax
+from .syntax import Syntax, UNSELECTABLE_SYS_SPECS
 
 
 class SAMK_PT_Settings(Panel):
@@ -44,16 +44,20 @@ class SAMK_PT_Settings(Panel):
     def draw_header(self, context):
         layout = self.layout
 
+
     def draw(self, context: bpy.context):
         layout = self.layout
         scene = context.scene
 
         column = layout.column()
         column.label(text='Spec Selection')
-        row = column.row(align=True)
-        row.prop(scene.samk, 'specs_enum', text='')
-        row.operator(SAMK_OT_RemoveSpec.bl_idname, text='', icon='TRASH')
-        row.operator(SAMK_OT_AddSpec.bl_idname, text='', icon='ADD')
+        row = column.row()
+        row.template_list(SAMK_UL_SpecList.__name__, 'The_List', scene.samk, 'specs_userdef', scene.samk, 'specs_userdef_index')
+
+        tb = row.column()
+        tb1 = tb.column(align=True)
+        tb1.operator(SAMK_OT_AddSpec.bl_idname, text='', icon='ADD')
+        # tb1.operator(SAMK_OT_LoadSpecs.bl_idname, text='', icon='DOWNARROW_HLT')
 
         column.operator(SAMK_OT_SetupOutliner.bl_idname)
         column.operator(SAMK_OT_CheckData.bl_idname)
