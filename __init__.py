@@ -62,11 +62,9 @@ from bpy.types import PropertyGroup
 
 from .operators import SAMK_OT_NewSourceCollection, SAMK_OT_NewSubSourceCollection
 
-from .setting.setting_operators import update_active_object, update_property_candidates_by_scope_type, scoped_collection_candidates, update_scoped_object, scoped_object_candidates
+from .setting.setting_operators import update_active_object, update_property_candidates_by_scope_type, scoped_collection_candidates, update_scoped_object, scoped_object_candidates, SAMKSpec, SAMKSpecUserDef
 
 from .setting.setting_command import SAMKCommandForAdd, SAMKStrategies
-
-from .setting.setting_spec import SAMKSpec, specs_candidates, update_specs
 
 from .syntax import Syntax
 
@@ -80,14 +78,12 @@ class SAMKAllProperty(PropertyGroup):
     specs: CollectionProperty(
         type=SAMKSpec
     )
-    specs_index: IntProperty(
-        name='Index for spec list',
-        default=0,
+    specs_userdef: CollectionProperty(
+        type=SAMKSpecUserDef
     )
-    specs_enum: EnumProperty(
-        name='select spec for setup',
-        items=specs_candidates,
-        update=update_specs
+    specs_userdef_index: IntProperty(
+        name='Index for spec list',
+        default=0
     )
     scoped_collection: EnumProperty(
         name='Scoped collection',

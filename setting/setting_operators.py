@@ -19,7 +19,9 @@ import bpy
 
 from abc import ABC, abstractmethod
 
-from bpy.types import Operator
+from bpy.types import Operator, PropertyGroup, UIList
+
+from bpy.props import BoolProperty, StringProperty
 
 from .. import debug
 
@@ -39,6 +41,83 @@ from ..setting.setting_command import SAMK_OT_AddCommand, SAMK_OT_RemoveCommand,
 logger = logging.getLogger(f'{Syntax.TOOLNAME}')
 
 
+def update_specs(self, context: bpy.context):
+    scene = context.scene
+    
+    # delete all specs
+    for _ in scene.samk.specs:
+        scene.samk.specs.remove(0)
+
+    # copy userdefs to specs
+    for spec_userdef in scene.samk.specs_userdef:
+        new_spec = scene.samk.specs.add()
+        new_spec.name = spec_userdef.name
+        new_spec.is_enabled = spec_userdef.is_enabled
+
+    # register system reserved specs
+    spec_names = tuple(spec.name for spec in scene.samk.specs)
+    for sys_spec in ALL_SYS_SPECS:
+        if sys_spec not in spec_names:
+            new_spec = scene.samk.specs.add()
+            new_spec.name = sys_spec
+
+    # set is_enabled of default and disable
+    for spec in scene.samk.specs:
+        if spec.name == SYS_SPECS.DEFAULT:
+            spec.is_enabled = True
+            continue
+        if spec.name == SYS_SPECS.DISABLE:
+            spec.is_enabled = False
+            continue
+
+
+class SAMKSpec(PropertyGroup):
+    name: StringProperty(
+        name='Spec name',
+        description='Spec name for setup.',
+        default='Default'
+    )
+
+    is_enabled: BoolProperty(
+        name='check box for enabled spec name',
+        description='Check the specs for which setup is activated.',
+        default=False
+    )
+
+
+class SAMKSpecUserDef(PropertyGroup):
+    name: StringProperty(
+        name='Spec name',
+        description='Spec name for setup.',
+        default='Default',
+        update=update_specs
+    )
+
+    is_enabled: BoolProperty(
+        name='check box for enabled spec name',
+        description='Check the specs for which setup is activated.',
+        default=False,
+        update=update_specs
+    )
+
+
+class SAMK_UL_SpecList(UIList):
+    def draw_item(self, context: bpy.context, layout, data, item, icon, active_data,
+                  active_propname, index):
+
+        scene = context.scene
+
+        custom_icon = Icon.SPEC
+
+        row = layout.row()
+
+        # row.prop(item, 'name', text='')
+        row.label(text=item.name, icon=custom_icon)
+        row.prop(item, 'is_enabled', text='')
+        remove_op = row.operator(SAMK_OT_RemoveSpec.bl_idname, text='', icon='TRASH')
+        remove_op.index_delete = index
+
+
 class SAMK_OT_AddSpec(Operator):
     bl_idname = 'samk.add_spec'
     bl_label = 'Add new spec'
@@ -52,9 +131,9 @@ class SAMK_OT_AddSpec(Operator):
             return {'FINISHED'}
         if self.is_system_reserved_name(context):
             return {'FINISHED'}
-        new_spec = context.scene.samk.specs.add()
+        new_spec = context.scene.samk.specs_userdef.add()
         new_spec.name = scene.samk.new_spec_name
-        context.scene.samk.specs_enum = new_spec.name
+        
         return {'FINISHED'}
 
     @debug.debug_invoke(logger)
@@ -83,7 +162,7 @@ class SAMK_OT_AddSpec(Operator):
     
     def is_already_exist_spec(self, context):
         scene = context.scene
-        return scene.samk.new_spec_name in [spec.name for spec in scene.samk.specs]
+        return scene.samk.new_spec_name in [spec.name for spec in scene.samk.specs_userdef]
 
     def is_empty_spec_name(self, context):
         scene = context.scene
@@ -97,24 +176,19 @@ class SAMK_OT_AddSpec(Operator):
 class SAMK_OT_RemoveSpec(Operator):
     bl_idname = 'samk.remove_spec'
     bl_label = 'Delete spec'
+    
+    index_delete: bpy.props.IntProperty(default=0)
 
     @classmethod
     def poll(cls, context):
-        return context.scene.samk.specs and (context.scene.samk.specs_enum != SYS_SPECS.DEFAULTONLY)
+        return True
+        # return context.scene.samk.specs and (context.scene.samk.specs_enum != SYS_SPECS.DEFAULTONLY)
 
     @debug.debug_execute(logger)
     def execute(self, context: bpy.context):
-        samk_specs = context.scene.samk.specs        
-        for index, samk_spec in enumerate(samk_specs):
-            if context.scene.samk.specs_enum == samk_spec.name:
-                index_new = index - 1
-                samk_specs.remove(index)
-                
-                new_selected_spec_name = samk_specs[index_new].name
-                if new_selected_spec_name in ALL_SYS_SPECS:
-                    new_selected_spec_name = SELECTABLE_SYS_SPECS[0]
-                context.scene.samk.specs_enum = new_selected_spec_name
-                break
+        samk_specs = context.scene.samk.specs_userdef
+        samk_specs.remove(self.index_delete)
+        update_specs(self, context)
 
         return {'FINISHED'}
 
@@ -486,4 +560,7 @@ classes = [
     SAMK_OT_LoadSpecs,
     SAMK_OT_SetupOutliner,
     SAMK_OT_CheckData,
+    SAMKSpec,
+    SAMKSpecUserDef,
+    SAMK_UL_SpecList,
 ]
