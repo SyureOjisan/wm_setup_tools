@@ -68,6 +68,15 @@
             <<ValueObject>> TextureImage
             TextureImage: " bpy.types.Image" -real
 
+        class ACreatedCollection
+            ACreatedCollection: update() ACreatedCollection
+
+        class Translator
+            Translator: translate()
+
+        class MaterialCombiner
+            MaterialCombiner: combine_materials()
+
         RootSourceCollectionList o--> ACollection
 
         ACollection o-->"recursively" ACollection
@@ -105,25 +114,32 @@
         AReleaseObject <|-- ReleaseObject
         AReleaseObject <|-- SubReleaseObject
 
-        Translater o--> ReleaseCollectionList
-        Translater ..>"create" ACreatedCollection
+        Translator o--> ReleaseCollectionList
+        Translator o--> MaterialTranslator
+        Translator o--> ANameTranslator
+        Translator ..>"create" ACreatedCollection
 
-        MaterialCombiner "1"o-->"1..2" ACreatedCollection
-        MaterialCombiner ..>"use" ExternalAddonTool
-        MaterialCombiner "1"..>"1..* create" TextureImage
+        ANameTranslator <|-- BoneGroupTranslator
+        ANameTranslator <|-- ShapeKeyTranslator
 
-        class Translater
-            Translater: translate()
+        ANameTranslator o--> ProfileHandler
 
-        class MaterialCombiner
-            MaterialCombiner: combine_materials()
+        ProfileHandler <|-- ProfileReader
+        ProfileHandler <|-- ProfileWriter
+
+        TranslatedCollection "1"o-->"1..*" TranslatedObject
+        DefaultCollection "1"o-->"1..*" DefaultObject
+        
+        Feedback o--> ContainerCollection
+        Feedback o--> ACreatedCollection
+
+        ContainerCollection "1"o-->"1..*" ContainerObject
+        Translator o--> ContainerCollection
 
         ACreatedCollection <|-- TranslatedCollection
         ACreatedCollection <|-- DefaultCollection
 
-        ACreatedCollection ..>"1..* create" ContainerObject
-        ACreatedCollection ..>"use" ContainerObject
-
-        TranslatedCollection "1"o-->"1..*" TranslatedObject
-        DefaultCollection "1"o-->"1..*" DefaultObject 
+        MaterialCombiner "1"o-->"1..2" ACreatedCollection
+        MaterialCombiner ..>"use" ExternalAddonTool
+        MaterialCombiner "1"..>"1..* create" TextureImage
 ```
