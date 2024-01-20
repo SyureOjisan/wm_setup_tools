@@ -1,5 +1,10 @@
 ```mermaid
     classDiagram
+        WMCollection <|-- ASourceCollection
+        WMCollection <|-- AReleaseCollection
+        WMCollection <|-- AFinalCollection
+        WMCollection <|-- ContainerCollection
+
         RootSourceCollectionList o--> ASourceCollection
 
         ASourceCollection o-->"recursively" ASourceCollection
@@ -10,17 +15,11 @@
 
         ASourceCollection <|-- SubSourceCollection
 
-        ASourceCollection <|-- NullSourceCollection
-
-        ASourceCollection "1"o-->"1..*" ASourceObject
+        ASourceCollection "1"o-->"1..*" SourceObject
 
         ASourceCollection ..>"use" SetupObject
 
         SetupObject "0..*"o-->"1..*" ISetupCommand
-
-        ASourceObject <|-- SourceObject
-
-        ASourceObject <|-- NullSourceObject
 
         SourceObject ..>"create" SetupObject
 
@@ -40,6 +39,7 @@
         Translator o--> ReleaseCollectionList
         Translator o--> MaterialTranslator
         Translator o--> ANameTranslator
+        Translator o--> ContainerCollection
         Translator ..>"create" AFinalObject
 
         ANameTranslator <|-- BoneGroupTranslator
@@ -51,7 +51,6 @@
         ProfileHandler <|-- ProfileWriter
 
         ContainerCollection "1"o-->"1..*" ContainerObject
-        Translator o--> ContainerCollection
 
         AFinalObject <|-- TranslatedObject
         AFinalObject <|-- DefaultObject
@@ -83,10 +82,10 @@
             ASourceCollection: setup() AReleaseObject
             ASourceCollection: update() ASourceCollection
 
-        class ASourceObject
-            <<ValueObject>> ASourceObject
-            ASourceObject: "bpy.types.Object" -real
-            ASourceObject: create_setup_object() SetupObject
+        class SourceObject
+            <<ValueObject>> SourceObject
+            SourceObject: "bpy.types.Object" -real
+            SourceObject: create_setup_object() SetupObject
 
         class SetupObject
             <<ValueObject>> SetupObject
@@ -113,12 +112,6 @@
             ReleaseCollectionList
             ReleaseCollectionList: update() ReleaseCollectionList
 
-        class NullSourceCollection
-            <<NullObject>> NullSourceCollection
-        
-        class NullSourceObject
-            <<NullObject>> NullSourceObject
-
         class ReleaseObject
             <<ValueObject>> ReleaseObject
 
@@ -139,7 +132,7 @@
 
         class TextureImage
             <<ValueObject>> TextureImage
-            TextureImage: " bpy.types.Image" -real
+            TextureImage: "bpy.types.Image" -real
 
         class AFinalCollection
             <<Abstract>> AFinalCollection
