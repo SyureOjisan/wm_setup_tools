@@ -1,10 +1,5 @@
 ```mermaid
     classDiagram
-        WMCollection <|-- ASourceCollection
-        WMCollection <|-- AReleaseCollection
-        WMCollection <|-- AFinalCollection
-        WMCollection <|-- ContainerCollection
-
         RootSourceCollectionList o--> ASourceCollection
 
         ASourceCollection o-->"recursively" ASourceCollection
@@ -68,6 +63,15 @@
         MaterialCombiner ..>"use" ExternalAddonTool
         MaterialCombiner "1"..>"1..* create" TextureImage
 
+        CollectionUpdater <--* ASourceCollection
+        CollectionUpdater <--* AReleaseCollection
+        CollectionUpdater <--* ContainerCollection
+        CollectionUpdater <--* AFinalCollection
+
+        ObjectFinder <--* AReleaseCollection
+        ObjectFinder <--* ContainerCollection
+        ObjectFinder <--* AFinalCollection
+
         class RootSourceCollectionList
             RootSourceCollectionList: list_of_ASourceCollection  member
             RootSourceCollectionList: update() RootSourceCollectionList
@@ -106,7 +110,7 @@
             AReleaseCollection: "bpy.types.Collection" -real
             AReleaseCollection: list_of_AReleaseObject objects
             AReleaseCollection: update() AReleaseCollection
-            AReleaseCollection: search_object() AReleaseObject
+            AReleaseCollection: find_object() AReleaseObject
 
         class ReleaseCollectionList
             ReleaseCollectionList
@@ -139,8 +143,7 @@
             AFinalCollection: "bpy.types.Collection" -real
             AFinalCollection: list_of_AFinalObject objects
             AFinalCollection: update() AFinalCollection
-            AFinalCollection: search_object() AFinalObject
-
+            AFinalCollection: find_object() AFinalObject
 
         class Translator
             Translator: translate()
@@ -155,7 +158,7 @@
             ContainerCollection: "bpy.types.Collection" -real
             ContainerCollection: list_of_ContainerObject objects
             ContainerCollection: update() ContainerCollection
-            ContainerCollection: search_object() ContainerObject
+            ContainerCollection: find_object() ContainerObject
 
         class AFinalObject
             <<Abstract>> AFinalObject
@@ -163,4 +166,10 @@
             AFinalObject: delete()
             AFinalObject: register_to_collection()
 
+
+        class CollectionUpdater
+            CollectionUpdater: update()
+
+        class ObjectFinder
+            ObjectFinder: find_object()
 ```
