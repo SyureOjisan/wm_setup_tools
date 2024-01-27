@@ -63,14 +63,10 @@
         MaterialCombiner ..>"use" ExternalAddonTool
         MaterialCombiner "1"..>"1..* create" TextureImage
 
-        CollectionUpdater <--* ASourceCollection
-        CollectionUpdater <--* AReleaseCollection
-        CollectionUpdater <--* ContainerCollection
-        CollectionUpdater <--* AFinalCollection
-
-        ObjectFinder <--* AReleaseCollection
-        ObjectFinder <--* ContainerCollection
-        ObjectFinder <--* AFinalCollection
+        CollectionUtils "use"<.. ASourceCollection
+        CollectionUtils "use"<.. AReleaseCollection
+        CollectionUtils "use"<.. ContainerCollection
+        CollectionUtils "use"<.. AFinalCollection
 
         class RootSourceCollectionList
             RootSourceCollectionList: list_of_ASourceCollection  member
@@ -167,9 +163,7 @@
             AFinalObject: register_to_collection()
 
 
-        class CollectionUpdater
-            CollectionUpdater: update()
-
-        class ObjectFinder
-            ObjectFinder: find_object()
+        class CollectionUtils
+            CollectionUtils: update()$
+            CollectionUtils: find_object()$
 ```
