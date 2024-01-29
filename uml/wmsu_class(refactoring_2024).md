@@ -1,10 +1,10 @@
 ```mermaid
     classDiagram
-        RootSourceCollectionList o--> ASourceCollection
+        RootSourceCollections o--> ASourceCollection
 
         ASourceCollection o-->"recursively" ASourceCollection
 
-        ASourceCollection <|-- RootSourceCollection
+        ASourceCollection <|-- NullSourceCollection
 
         ASourceCollection <|-- SourceCollection
 
@@ -18,7 +18,9 @@
 
         SourceObject ..>"create" SetupObject
 
-        ReleaseCollectionList "1"o-->"1..*" AReleaseCollection
+        ASourceCollection ..>"use" AReleaseCollection
+
+        ReleaseCollections "1"o-->"1..*" AReleaseCollection
 
         AReleaseCollection <|-- ReleaseCollection
         ReleaseCollection "1"o-->"1..*" ReleaseObject
@@ -31,10 +33,11 @@
         AReleaseObject <|-- ReleaseObject
         AReleaseObject <|-- SubReleaseObject
 
-        Translator o--> ReleaseCollectionList
+        Translator o--> ReleaseCollections
         Translator o--> MaterialTranslator
         Translator o--> ANameTranslator
         Translator o--> ContainerCollection
+        Translator ..>"use" AReleaseCollection
         Translator ..>"create" AFinalObject
 
         ANameTranslator <|-- BoneGroupTranslator
@@ -68,15 +71,15 @@
         CollectionUtils "use"<.. ContainerCollection
         CollectionUtils "use"<.. AFinalCollection
 
-        class RootSourceCollectionList
-            RootSourceCollectionList: list_of_ASourceCollection  member
-            RootSourceCollectionList: update() RootSourceCollectionList
-            RootSourceCollectionList: queue()
-            RootSourceCollectionList: setup() list_of_AReleaseObject
+        class RootSourceCollections
+            RootSourceCollections: list_of_ASourceCollection  member
+            RootSourceCollections: update() RootSourceCollections
+            RootSourceCollections: queue() list_of_ASourceCollection
+            RootSourceCollections: setup() list_of_AReleaseObject
 
         class ASourceCollection
             <<Abstract>> ASourceCollection
-            ASourceCollection: list_of_ASourceCollection children
+            ASourceCollection: ASourceCollection parent
             ASourceCollection: "bpy.types.Collection" -real
             ASourceCollection: list_of_SourceObject objects
             ASourceCollection: setup() AReleaseObject
@@ -108,9 +111,9 @@
             AReleaseCollection: update() AReleaseCollection
             AReleaseCollection: find_object() AReleaseObject
 
-        class ReleaseCollectionList
-            ReleaseCollectionList
-            ReleaseCollectionList: update() ReleaseCollectionList
+        class ReleaseCollections
+            ReleaseCollections
+            ReleaseCollections: update() ReleaseCollections
 
         class ReleaseObject
             <<ValueObject>> ReleaseObject
