@@ -22,8 +22,15 @@
             src ->>+ srcobj: setup source object
             srcobj ->>+ suobj: do setup strategy
             suobj -->>- srcobj: setup finish
-            srcobj -->>- src: setupped source object
+            srcobj -->>- src: setupped source object            
+            Note over src: merge object
+        end
+        Note over src: merge (sub)release object
+        alt release object
+            Note over src: link to release collection
+        else
+            Note over src: link to subrelease collection
         end
     end
-    src -->>- roots : setupped objects
+    src -->>- roots : release objects
 ```
