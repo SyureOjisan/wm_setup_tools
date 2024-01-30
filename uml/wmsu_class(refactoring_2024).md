@@ -74,7 +74,7 @@
         class RootSourceCollections
             RootSourceCollections: list_of_ASourceCollection  member
             RootSourceCollections: update() RootSourceCollections
-            RootSourceCollections: queue() list_of_ASourceCollection
+            RootSourceCollections: queue() RootSourceCollections
             RootSourceCollections: setup() list_of_AReleaseObject
 
         class ASourceCollection
